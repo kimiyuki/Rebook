@@ -1,34 +1,40 @@
 package abc_analytics.com.rebook
 
-import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
-import androidx.appcompat.app.AppCompatActivity;
-
-import kotlinx.android.synthetic.main.activity_main.*
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.util.Size
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.util.Rational
+import android.util.Size
 import android.view.*
-import android.widget.ImageButton
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.ImageCaptureConfig.*
+import androidx.camera.core.ImageCaptureConfig.Builder
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.FirebaseApp
 import com.google.firebase.ml.vision.FirebaseVision
+import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.google.firebase.ml.vision.document.FirebaseVisionCloudDocumentRecognizerOptions
+import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -44,30 +50,97 @@ private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 class MainActivity : AppCompatActivity(), LifecycleOwner {
 
     private lateinit var viewFinder: TextureView
+    private var lastImagePath: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
-        FirebaseApp.initializeApp(this)
-
         viewFinder = findViewById(R.id.view_finder)
+        reqPermissionAndStartCamera(viewFinder) // Request camera permissions
+        viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateTransform() }
 
-        // Request camera permissions
-        if (allPermissionsGranted()) {
-            viewFinder.post { startCamera() }
-        } else {
-            ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        testButton.setOnClickListener {
+            startActivity(Intent(this, DocActivity::class.java))
         }
-
-        viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateTransform()
-        }
+        Log.d("hello use case", "aaa")
 
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show()
+        }
+        myTest()
+        Log.d("hello ", "Done")
+    }
+
+    private fun myTest() {
+        runBlocking {
+            val http = HttpUtil()
+            //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackgroundで実行
+            val url = "https://www.googleapis.com/books/v1/volumes?q=9784797391398"
+            async(Dispatchers.Default) { http.httpGET(url) }.await().let {
+                //minimal-jsonを使って　jsonをパース
+                val json = JSONObject(it)
+                val title = json.getJSONArray("items").getJSONObject(0)
+                    .getJSONObject("volumeInfo").getString("title")
+                textViewAnswer.text = title
+            }
+        }
+
+//        val db = FirebaseFirestore.getInstance()
+//        val user = hashMapOf(
+//            "first" to "Ada",
+//            "last" to "Lovelace",
+//            "born" to 1815
+//        )
+//// Add a new document with a generated ID
+//        val TAG = "hello firestore"
+//        val ret = db.collection("users")
+//            .get()
+//            .addOnSuccessListener { result ->
+//                for(doc in result){
+//                    Log.d(TAG, doc.data.toString())
+//                }
+//            }
+//
+//            .addOnFailureListener { e ->
+//                Log.w(TAG, "Error adding document", e)
+//            }
+
+    }
+
+    private fun startCamera() {
+
+        // Create configuration object for the viewfinder use case
+        val preview = preview()
+
+        // Build the image capture use case and attach button click listener
+        val imageCapture = imageCapture()
+
+        val analyzerConfig = ImageAnalysisConfig.Builder().apply {
+            // Use a worker thread for image analysis to prevent glitches
+            val analyzerThread = HandlerThread("LuminosityAnalysis").apply { start() }
+            setCallbackHandler(Handler(analyzerThread.looper))
+            // In our analysis, we care more about the latest image than
+            // analyzing *every* image
+            setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
+        }.build()
+        Log.d("hello", "world1")
+        val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
+            Log.d("hello", "world2")
+            analyzer = BarcodeDetector()
+        }
+        // Bind use cases to lifecycle
+        // If Android Studio complains about "this" being not a LifecycleOwner
+        // try rebuilding the project or updating the appcompat dependency to version 1.1.0 or higher.
+        CameraX.bindToLifecycle(this, preview, imageCapture, analyzerUseCase)
+    }
+
+    private fun reqPermissionAndStartCamera(v: TextureView) {
+        if (allPermissionsGranted()) {
+            v.post { startCamera() }
+        } else {
+            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
     }
 
@@ -83,10 +156,11 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(
-            baseContext, it) == PackageManager.PERMISSION_GRANTED
+    fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
+
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -104,24 +178,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
-    private fun startCamera() {
-
-        // Create configuration object for the viewfinder use case
-        val preview = preview()
-
-
-        // Build the image capture use case and attach button click listener
-        val imageCapture = imageCapture()
-
-        val analyzerUseCase = imageAnalysis()
-
-        // Bind use cases to lifecycle
-        // If Android Studio complains about "this" being not a LifecycleOwner
-        // try rebuilding the project or updating the appcompat dependency to
-        // version 1.1.0 or higher.
-        //CameraX.bindToLifecycle(this, preview)
-        CameraX.bindToLifecycle(this, preview, imageCapture, analyzerUseCase)
-    }
 
     private fun preview(): Preview {
         val previewConfig = PreviewConfig.Builder().apply {
@@ -167,54 +223,73 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                     }
                     override fun onImageSaved(file: File) {
                         val msg = "Photo capture succeeded: ${file.absolutePath}"
+                        lastImagePath = file.absolutePath
                         Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                         Log.d("CameraXApp", msg)
                         //use thread?
-                        getTextFromCloud(file)
+                        val options = BitmapFactory.Options()
+                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
+                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                        analyzeImage(bitmap)
                     }
                 })
         }
         return imageCapture
     }
 
-    private fun getTextFromCloud(file:File){
-
-        //need to catch exception
-        val image = FirebaseVisionImage.fromFilePath(this@MainActivity, file.toUri())
-        //if(ret.isFailure){ Log.d("aaa fail", ret.exceptionOrNull().toString()) }
-        val options = FirebaseVisionCloudDocumentRecognizerOptions.Builder()
-            .setLanguageHints(Arrays.asList("ja", "en")) .build()
-        val detector = FirebaseVision.getInstance().getCloudDocumentTextRecognizer(options)
-        detector.processImage(image)
-            .addOnSuccessListener {
-                Log.d("aaa ok", "success")
-            }
-            .addOnFailureListener {
-                Log.d("aaa ng", it.toString())
-            }
-
-    }
-
-    private fun imageAnalysis(): ImageAnalysis {
-        val analyzerConfig = ImageAnalysisConfig.Builder().apply {
-            // Use a worker thread for image analysis to prevent glitches
-            val analyzerThread = HandlerThread(
-                "LuminosityAnalysis"
-            ).apply { start() }
-            setCallbackHandler(Handler(analyzerThread.looper))
-            // In our analysis, we care more about the latest image than
-            // analyzing *every* image
-            setImageReaderMode(
-                ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE
-            )
-        }.build()
-
-        // Build the image analysis use case and instantiate our analyzer
-        val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
-            analyzer = LuminosityAnalyzer()
+    fun analyzeImage(image: Bitmap?) {
+        if (image == null) {
+            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
+            return
         }
-        return analyzerUseCase
+
+        Log.d("hello analyze", "aaa")
+        FirebaseApp.initializeApp(this)
+        val firebaseVisionImage = FirebaseVisionImage.fromBitmap(image)
+        val options =
+            FirebaseVisionCloudDocumentRecognizerOptions.Builder().setLanguageHints(Arrays.asList("ja", "en")).build()
+        val textRecognizer = FirebaseVision.getInstance()
+            .getCloudDocumentTextRecognizer(options)
+        textRecognizer.processImage(firebaseVisionImage)
+            .addOnSuccessListener {
+                Toast.makeText(this@MainActivity, "came to success", Toast.LENGTH_SHORT).show()
+                val mutableImage = image.copy(Bitmap.Config.ARGB_8888, true)
+                recognizeText(it, mutableImage)
+            }
+            .addOnFailureListener { Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show() }
     }
+
+    //fun recognizeText(result: FirebaseVisionText?, image: Bitmap?) {
+    fun recognizeText(result: FirebaseVisionDocumentText?, image: Bitmap?) {
+        if (result == null || image == null) {
+            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Log.d("aaa result text", result.text.toString())
+        val sendIntent = Intent(this@MainActivity, DocActivity::class.java)
+        sendIntent.putExtra(DOC_CONTENT, result.text)
+        //sendIntent.putExtra("IMG", image )
+        startActivityForResult(sendIntent, MAIN_DOC)
+        //textViewAnswer.text = result.text.toString()
+        Toast.makeText(this@MainActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
+
+
+//        val rectPaint = Paint()
+//        rectPaint.color = Color.RED
+//        rectPaint.style = Paint.Style.STROKE
+//        rectPaint.strokeWidth = 4F
+//        val textPaint = Paint()
+//        textPaint.color = Color.RED
+//        textPaint.textSize = 40F
+//
+//        var index = 0
+//        for (block in result.blocks){
+//            for (line in block.paragraphs) {
+//                Log.d("text result", line.toString())
+//            }
+//        }
+    }
+
 
 
     private fun updateTransform() {
@@ -238,6 +313,72 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         viewFinder.setTransform(matrix)
     }
 
+    inner class BarcodeDetector : ImageAnalysis.Analyzer {
+        private var lastAnalyzedTimestamp = 0L
+        private fun degreesToFirebaseRotation(degrees: Int): Int = when (degrees) {
+            0 -> FirebaseVisionImageMetadata.ROTATION_0
+            90 -> FirebaseVisionImageMetadata.ROTATION_90
+            180 -> FirebaseVisionImageMetadata.ROTATION_180
+            270 -> FirebaseVisionImageMetadata.ROTATION_270
+            else -> throw Exception("Rotation must be 0, 90, 180, or 270.")
+        }
+
+        override fun analyze(imageProxy: ImageProxy?, degrees: Int) {
+            val currentTimestamp = System.currentTimeMillis()
+            Log.d("hello analyze", degrees.toString())
+            // Calculate the average luma no more often than every second
+            if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(3)) {
+                val mediaImage = imageProxy?.image
+                val imageRotation = degreesToFirebaseRotation(degrees)
+                Log.d("hello image", degrees.toString())
+                Toast.makeText(this@MainActivity, "detect", Toast.LENGTH_LONG).show()
+                if (mediaImage != null) {
+                    val image = FirebaseVisionImage.fromMediaImage(mediaImage, imageRotation)
+                    val detector = FirebaseVision.getInstance().visionBarcodeDetector
+                    val result = detector.detectInImage(image)
+                        .addOnSuccessListener { barcodes ->
+                            for (barcode in barcodes) {
+                                val bounds = barcode.boundingBox
+                                val corners = barcode.cornerPoints
+                                val rawValue = barcode.rawValue
+                                val valueType = barcode.valueType
+                                // See API reference for complete list of supported types
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                //SystemClock.sleep(3000)
+                                when (valueType) {
+                                    FirebaseVisionBarcode.TYPE_WIFI -> {
+                                        val ssid = barcode.wifi!!.ssid
+                                        val password = barcode.wifi!!.password
+                                        val type = barcode.wifi!!.encryptionType
+                                    }
+                                    FirebaseVisionBarcode.TYPE_URL -> {
+                                        val title = barcode.url!!.title
+                                        val url = barcode.url!!.url
+                                    }
+                                    FirebaseVisionBarcode.TYPE_UNKNOWN -> {
+                                        val a = barcode.valueType
+                                        Log.d("hello barcode unknown", barcode.displayValue)
+                                    }
+                                    else -> {
+                                        val a = barcode.valueType
+                                        Log.d("hello barcode type", a.toString())
+                                    }
+                                }
+                            }
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(this@MainActivity, "scan failed", Toast.LENGTH_LONG).show()
+                            Log.d("firebase barcode", it.message)
+                        }
+                }
+                lastAnalyzedTimestamp = currentTimestamp
+            }
+        }
+    }
 
     private class LuminosityAnalyzer : ImageAnalysis.Analyzer {
         private var lastAnalyzedTimestamp = 0L
@@ -255,6 +396,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
         override fun analyze(image: ImageProxy, rotationDegrees: Int) {
             val currentTimestamp = System.currentTimeMillis()
+            Log.d("camera Y", "AAAA")
             // Calculate the average luma no more often than every second
             if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
                 // Since format in ImageAnalysis is YUV, image.planes[0]
@@ -273,6 +415,5 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             }
         }
     }
-
 
 }

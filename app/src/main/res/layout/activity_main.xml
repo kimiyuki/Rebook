@@ -30,5 +30,11 @@
             android:layout_gravity="bottom|end"
             android:layout_margin="@dimen/fab_margin"
             app:srcCompat="@android:drawable/ic_dialog_email"/>
+    <Button
+            android:text="go test"
+            android:layout_gravity="bottom|left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/testButton" android:layout_margin="30dp"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

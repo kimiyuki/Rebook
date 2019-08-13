@@ -4,7 +4,12 @@
           package="abc_analytics.com.rebook">
 
     <dist:module dist:instant="true"/>
-    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
             android:allowBackup="true"
             android:icon="@mipmap/ic_launcher"
@@ -12,10 +17,14 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/AppTheme">
-    <meta-data
-            android:name="com.google.firebase.ml.vision.DEPENDENCIES"
-            android:value="ocr" />
-    <!-- To use multiple models: android:value="ocr,model2,model3" -->
+        <activity android:name=".DocActivity">
+        </activity>
+        <activity android:name=".BarcodeActivity">
+        </activity>
+
+        <meta-data
+                android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+                android:value="ocr"/> <!-- To use multiple models: android:value="ocr,model2,model3" -->
         <activity
                 android:name=".MainActivity"
                 android:label="@string/app_name"
