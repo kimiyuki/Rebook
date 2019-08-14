@@ -23,19 +23,18 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.FirebaseApp
 import com.google.firebase.ml.vision.FirebaseVision
-import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.google.firebase.ml.vision.document.FirebaseVisionCloudDocumentRecognizerOptions
 import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import org.json.JSONObject
 import java.io.File
-import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -51,6 +50,8 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
     private lateinit var viewFinder: TextureView
     private var lastImagePath: String = ""
+    val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    val adapter = moshi.adapter(GoogleBook::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,49 +65,31 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             startActivity(Intent(this, DocActivity::class.java))
         }
         Log.d("hello use case", "aaa")
-
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show()
         }
-        myTest()
         Log.d("hello ", "Done")
-    }
-
-    private fun myTest() {
-        runBlocking {
-            val http = HttpUtil()
-            //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackgroundで実行
-            val url = "https://www.googleapis.com/books/v1/volumes?q=9784797391398"
-            async(Dispatchers.Default) { http.httpGET(url) }.await().let {
-                //minimal-jsonを使って　jsonをパース
-                val json = JSONObject(it)
-                val title = json.getJSONArray("items").getJSONObject(0)
-                    .getJSONObject("volumeInfo").getString("title")
-                textViewAnswer.text = title
+        checkBoxOkTitle.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (!isChecked) {
+                textViewTitle.text = ""
             }
         }
+    }
 
-//        val db = FirebaseFirestore.getInstance()
-//        val user = hashMapOf(
-//            "first" to "Ada",
-//            "last" to "Lovelace",
-//            "born" to 1815
-//        )
-//// Add a new document with a generated ID
-//        val TAG = "hello firestore"
-//        val ret = db.collection("users")
-//            .get()
-//            .addOnSuccessListener { result ->
-//                for(doc in result){
-//                    Log.d(TAG, doc.data.toString())
-//                }
-//            }
-//
-//            .addOnFailureListener { e ->
-//                Log.w(TAG, "Error adding document", e)
-//            }
-
+    private fun setBookInfo(bookId: String) {
+        runBlocking {
+            //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackgroundで実行
+            async(Dispatchers.Default) {
+                HttpUtil().httpGET(
+                    "https://www.googleapis.com/books/v1/volumes?q=${bookId}"
+                )
+            }.await().let {
+                val books = adapter.fromJson(it)
+                textViewTitle.text = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $bookId"
+                checkBoxOkTitle.isChecked = true
+            }
+        }
     }
 
     private fun startCamera() {
@@ -172,12 +155,14 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+        val id = item.itemId
+        if (id == R.id.action_settings) {
+            val intent = Intent(applicationContext, LoginActivity::class.java)
+            startActivity(intent)
+            return true
         }
+        return super.onOptionsItemSelected(item)
     }
-
 
     private fun preview(): Preview {
         val previewConfig = PreviewConfig.Builder().apply {
@@ -272,22 +257,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         startActivityForResult(sendIntent, MAIN_DOC)
         //textViewAnswer.text = result.text.toString()
         Toast.makeText(this@MainActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
-
-
-//        val rectPaint = Paint()
-//        rectPaint.color = Color.RED
-//        rectPaint.style = Paint.Style.STROKE
-//        rectPaint.strokeWidth = 4F
-//        val textPaint = Paint()
-//        textPaint.color = Color.RED
-//        textPaint.textSize = 40F
-//
-//        var index = 0
-//        for (block in result.blocks){
-//            for (line in block.paragraphs) {
-//                Log.d("text result", line.toString())
-//            }
-//        }
     }
 
 
@@ -327,93 +296,32 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             val currentTimestamp = System.currentTimeMillis()
             Log.d("hello analyze", degrees.toString())
             // Calculate the average luma no more often than every second
-            if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(3)) {
+            if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
                 val mediaImage = imageProxy?.image
                 val imageRotation = degreesToFirebaseRotation(degrees)
-                Log.d("hello image", degrees.toString())
-                Toast.makeText(this@MainActivity, "detect", Toast.LENGTH_LONG).show()
                 if (mediaImage != null) {
                     val image = FirebaseVisionImage.fromMediaImage(mediaImage, imageRotation)
                     val detector = FirebaseVision.getInstance().visionBarcodeDetector
                     val result = detector.detectInImage(image)
                         .addOnSuccessListener { barcodes ->
                             for (barcode in barcodes) {
-                                val bounds = barcode.boundingBox
-                                val corners = barcode.cornerPoints
-                                val rawValue = barcode.rawValue
                                 val valueType = barcode.valueType
-                                // See API reference for complete list of supported types
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                //SystemClock.sleep(3000)
-                                when (valueType) {
-                                    FirebaseVisionBarcode.TYPE_WIFI -> {
-                                        val ssid = barcode.wifi!!.ssid
-                                        val password = barcode.wifi!!.password
-                                        val type = barcode.wifi!!.encryptionType
-                                    }
-                                    FirebaseVisionBarcode.TYPE_URL -> {
-                                        val title = barcode.url!!.title
-                                        val url = barcode.url!!.url
-                                    }
-                                    FirebaseVisionBarcode.TYPE_UNKNOWN -> {
-                                        val a = barcode.valueType
-                                        Log.d("hello barcode unknown", barcode.displayValue)
-                                    }
-                                    else -> {
-                                        val a = barcode.valueType
-                                        Log.d("hello barcode type", a.toString())
-                                    }
+                                if (barcode.displayValue?.startsWith("97") == true) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    setBookInfo(barcode.displayValue!!)
                                 }
                             }
                         }
                         .addOnFailureListener {
                             Toast.makeText(this@MainActivity, "scan failed", Toast.LENGTH_LONG).show()
-                            Log.d("firebase barcode", it.message)
                         }
                 }
                 lastAnalyzedTimestamp = currentTimestamp
             }
         }
     }
-
-    private class LuminosityAnalyzer : ImageAnalysis.Analyzer {
-        private var lastAnalyzedTimestamp = 0L
-
-        /**
-         * Helper extension function used to extract a byte array from an
-         * image plane buffer
-         */
-        private fun ByteBuffer.toByteArray(): ByteArray {
-            rewind()    // Rewind the buffer to zero
-            val data = ByteArray(remaining())
-            get(data)   // Copy the buffer into a byte array
-            return data // Return the byte array
-        }
-
-        override fun analyze(image: ImageProxy, rotationDegrees: Int) {
-            val currentTimestamp = System.currentTimeMillis()
-            Log.d("camera Y", "AAAA")
-            // Calculate the average luma no more often than every second
-            if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
-                // Since format in ImageAnalysis is YUV, image.planes[0]
-                // contains the Y (luminance) plane
-                val buffer = image.planes[0].buffer
-                // Extract image data from callback object
-                val data = buffer.toByteArray()
-                // Convert the data into an array of pixel values
-                val pixels = data.map { it.toInt() and 0xFF }
-                // Compute average luminance for the image
-                val luma = pixels.average()
-                // Log the new luma value
-                Log.d("CameraXApp", "Average luminosity: $luma")
-                // Update timestamp of last analyzed frame
-                lastAnalyzedTimestamp = currentTimestamp
-            }
-        }
-    }
-
 }
