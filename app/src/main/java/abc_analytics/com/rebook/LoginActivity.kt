@@ -34,10 +34,19 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var mCreateAccountListener: OnCompleteListener<AuthResult>
     private lateinit var mLoginListener: OnCompleteListener<AuthResult>
 
-    private fun signOut() = FirebaseAuth.getInstance().signOut()
+    private fun signOut() {
+        FirebaseAuth.getInstance().signOut()
+        startActivity(Intent(this, MainActivity::class.java))
+    }
 
     private fun signIn() {
         progressBar.visibility = View.VISIBLE
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        Toast.makeText(this, "now login", Toast.LENGTH_LONG).show()
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
         val signInIntent = mGoogleSignInClient.signInIntent
         startActivityForResult(signInIntent, RC_SIGN_IN)
     }
@@ -96,16 +105,13 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
+        progressBar.visibility = View.GONE
+        mAuth = FirebaseAuth.getInstance()
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
             sign_in_button.setOnClickListener { signIn() }
-            Toast.makeText(this, mAuth.currentUser?.toString(), Toast.LENGTH_LONG).show()
-            mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
         } else {
+            sign_out_button.setOnClickListener { signOut() }
             textViewLoginName.text = user.displayName
             sign_in_button.isActivated = false
         }

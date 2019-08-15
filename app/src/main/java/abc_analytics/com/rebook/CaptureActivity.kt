@@ -13,7 +13,9 @@ import android.os.HandlerThread
 import android.util.Log
 import android.util.Rational
 import android.util.Size
-import android.view.*
+import android.view.Surface
+import android.view.TextureView
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -141,24 +143,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        val id = item.itemId
-        if (id == R.id.action_settings) {
-            val intent = Intent(applicationContext, LoginActivity::class.java)
-            startActivity(intent)
-            return true
-        }
-        return super.onOptionsItemSelected(item)
-    }
 
     private fun preview(): Preview {
         val previewConfig = PreviewConfig.Builder().apply {
