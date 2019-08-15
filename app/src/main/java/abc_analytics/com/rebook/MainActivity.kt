@@ -1,5 +1,6 @@
 package abc_analytics.com.rebook
 
+import abc_analytics.com.rebook.Model.GoogleBook
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     private var lastImagePath: String = ""
     val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     val adapter = moshi.adapter(GoogleBook::class.java)
+    //var fifo: Queue<String> = CircularFifoQueue<String>(2)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -146,7 +148,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
@@ -187,6 +188,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         return preview
     }
 
+
     private fun imageCapture(): ImageCapture {
         val imageCaptureConfig = Builder()
             .apply {
@@ -222,6 +224,21 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         return imageCapture
     }
 
+    //fun recognizeText(result: FirebaseVisionText?, image: Bitmap?) {
+    fun recognizeText(result: FirebaseVisionDocumentText?, image: Bitmap?) {
+        if (result == null || image == null) {
+            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Log.d("aaa result text", result.text.toString())
+        val sendIntent = Intent(this@MainActivity, DocActivity::class.java)
+        sendIntent.putExtra(DOC_CONTENT, result.text)
+        //sendIntent.putExtra("IMG", image )
+        startActivityForResult(sendIntent, MAIN_DOC)
+        //textViewAnswer.text = result.text.toString()
+        Toast.makeText(this@MainActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
+    }
+
     fun analyzeImage(image: Bitmap?) {
         if (image == null) {
             Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
@@ -242,21 +259,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                 recognizeText(it, mutableImage)
             }
             .addOnFailureListener { Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show() }
-    }
-
-    //fun recognizeText(result: FirebaseVisionText?, image: Bitmap?) {
-    fun recognizeText(result: FirebaseVisionDocumentText?, image: Bitmap?) {
-        if (result == null || image == null) {
-            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
-            return
-        }
-        Log.d("aaa result text", result.text.toString())
-        val sendIntent = Intent(this@MainActivity, DocActivity::class.java)
-        sendIntent.putExtra(DOC_CONTENT, result.text)
-        //sendIntent.putExtra("IMG", image )
-        startActivityForResult(sendIntent, MAIN_DOC)
-        //textViewAnswer.text = result.text.toString()
-        Toast.makeText(this@MainActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
     }
 
 
