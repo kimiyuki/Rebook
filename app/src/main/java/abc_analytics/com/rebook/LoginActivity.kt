@@ -34,6 +34,21 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var mCreateAccountListener: OnCompleteListener<AuthResult>
     private lateinit var mLoginListener: OnCompleteListener<AuthResult>
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
+        progressBar.visibility = View.GONE
+        mAuth = FirebaseAuth.getInstance()
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            sign_in_button.setOnClickListener { signIn() }
+        } else {
+            sign_out_button.setOnClickListener { signOut() }
+            textViewLoginName.text = user.displayName
+            sign_in_button.isActivated = false
+        }
+    }
+
     private fun signOut() {
         FirebaseAuth.getInstance().signOut()
         startActivity(Intent(this, MainActivity::class.java))
@@ -64,8 +79,8 @@ class LoginActivity : AppCompatActivity() {
                 firebaseAuthWithGoogle(account!!)
             } catch (e: ApiException) {
                 // Google Sign In failed, update UI appropriately
+                Toast.makeText(this, "sign in Failed", Toast.LENGTH_LONG).show()
                 Log.w(TAG, "Google sign in failed ${e.message}", e)
-                // ...
             }
         }
     }
@@ -73,7 +88,6 @@ class LoginActivity : AppCompatActivity() {
     private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
         try {
             val account = completedTask.getResult(ApiException::class.java)
-
             // Signed in successfully, show authenticated UI.
         } catch (e: ApiException) {
             // The ApiException status code indicates the detailed failure reason.
@@ -100,20 +114,5 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this, "failed", Toast.LENGTH_LONG)
                 }
             }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
-        progressBar.visibility = View.GONE
-        mAuth = FirebaseAuth.getInstance()
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) {
-            sign_in_button.setOnClickListener { signIn() }
-        } else {
-            sign_out_button.setOnClickListener { signOut() }
-            textViewLoginName.text = user.displayName
-            sign_in_button.isActivated = false
-        }
     }
 }

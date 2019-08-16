@@ -1,7 +1,9 @@
 package abc_analytics.com.rebook
 
 import abc_analytics.com.rebook.Model.Book
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -12,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
@@ -30,8 +33,41 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
         dataBook()
+        checkPerm()
+        testFireStore()
         Log.d("hello", mAuth.currentUser?.displayName ?: "no login")
         title = mAuth.currentUser?.displayName ?: "no yet login"
+    }
+
+    private fun testFireStore() {
+        val db = FirebaseFirestore.getInstance()
+        db.collection("scraps")
+            .get()
+            .addOnSuccessListener { result ->
+                for (document in result) {
+                    Log.d(TAG, "${document.id} => ${document.data}")
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.w(TAG, "Error getting documents.", exception)
+            }
+    }
+
+    private fun checkPerm() {
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            getContentsInfo(this)
+        } else {
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSIONS_REQUEST_CODE)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        if (grantResults[0] != PackageManager.PERMISSION_GRANTED) return
+        when (requestCode) {
+            PERMISSIONS_REQUEST_CODE -> {
+                getContentsInfo(this)
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -67,14 +103,11 @@ class MainActivity : AppCompatActivity() {
         )
         mBookAdapter = BookListAdapter(this@MainActivity, BookArray,
             onItemClicked = { book ->
-                //ISSUE endless execution? update invoke another selection item?
                 Log.d("hello adapter click", book?.title ?: "no book")
                 Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
             })
         recyclerViewBook.adapter = mBookAdapter
-        recyclerViewBook.layoutManager = LinearLayoutManager(
-            this, RecyclerView.VERTICAL, false
-        )
+        recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
     }
 
 }

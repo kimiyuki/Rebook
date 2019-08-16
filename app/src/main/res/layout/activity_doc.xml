@@ -10,25 +10,29 @@
         tools:context=".DocActivity">
 
     <TextView
+            android:text="TextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:id="@+id/textViewTitleDoc"
+            android:layout_weight="0.6"/>
+    <TextView
             android:text="response"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:id="@+id/docTextView"
-            android:layout_weight="4.8" android:textAlignment="center"/>
+            android:layout_height="match_parent"
+            android:id="@+id/textViewDoc"
+            android:layout_weight="4.5"
+            android:textAlignment="textStart"/>
     <ImageView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             app:srcCompat="@color/design_default_color_primary_dark"
-            android:id="@+id/imageView"
-            android:layout_weight="4.8"
-
-            android:textAlignment="center"/>
+            android:id="@+id/imageViewScrapCaptured"
+            android:layout_weight="4.5"/>
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_weight="0.4"
             android:orientation="horizontal">
         <Button
-                android:text="@android:string/ok"
+                android:text="upload"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:id="@+id/okButton"
                 app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent"

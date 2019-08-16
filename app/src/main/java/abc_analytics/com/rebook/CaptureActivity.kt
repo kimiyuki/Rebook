@@ -69,7 +69,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         Log.d("hello use case", "aaa")
         checkBoxOkTitle.setOnCheckedChangeListener { buttonView, isChecked ->
             if (!isChecked) {
-                textViewTitle.text = ""
+                textViewTitleCapture.text = ""
             }
         }
     }
@@ -85,7 +85,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                 val books = adapter.fromJson(it)
                 val title = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $bookId"
                 val thumbnail = books?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
-                textViewTitle.text = "${title}:${thumbnail}"
+                textViewTitleCapture.text = "${title}:${thumbnail}"
                 checkBoxOkTitle.isChecked = true
             }
         }
@@ -192,6 +192,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     override fun onImageSaved(file: File) {
                         val msg = "Photo capture succeeded: ${file.absolutePath}"
                         lastImagePath = file.absolutePath
+
                         Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                         Log.d("CameraXApp", msg)
                         //use thread?
@@ -214,8 +215,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         Log.d("aaa result text", result.text.toString())
         val sendIntent = Intent(this@CaptureActivity, DocActivity::class.java)
         sendIntent.putExtra(DOC_CONTENT, result.text)
+        sendIntent.putExtra(IMG_URI, lastImagePath)
+        sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
+
         //sendIntent.putExtra("IMG", image )
-        startActivityForResult(sendIntent, MAIN_DOC)
+        startActivityForResult(sendIntent, MAIN_DOC_REQUEST_CODE)
         //textViewAnswer.text = result.text.toString()
         Toast.makeText(this@CaptureActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
     }

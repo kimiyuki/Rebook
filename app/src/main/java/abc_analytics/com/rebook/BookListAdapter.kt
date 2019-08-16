@@ -16,7 +16,6 @@ class BookListAdapter(
 ) : RecyclerView.Adapter<BookListAdapter.BookViewHolder>() {
 
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
-
     class BookViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val bookTitle: TextView = itemView.textViewBookTitle
         fun updateWithUrl(url: String?) {
