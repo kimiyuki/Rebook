@@ -17,10 +17,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mBookAdapter: BookListAdapter
     private val mAuth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,11 +38,58 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show()
         }
-        dataBook()
-        checkPerm()
-        testFireStore()
-        Log.d("hello", mAuth.currentUser?.displayName ?: "no login")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        //val bookArray = dataBook()
+        GlobalScope.launch(Dispatchers.Main) {
+            val bookArray = dataBookFromFB()
+            checkPerm()
+            updateUI(bookArray.toTypedArray())
+        }
+    }
+
+    private suspend fun dataBookFromFB(): List<Book?> {
+        val snapshots = withContext(Dispatchers.Default) {
+            val ref = db.collection("books")
+            ref.get().await().documents.map { it.toObject(Book::class.java) }
+        }
+        return snapshots
+    }
+
+
+    private fun dataBook(): Array<Book> {
+        val thumbs = arrayOf(
+            "http://books.google.com/books/content?id=m1OjDwAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
+            ,
+            "http://books.google.com/books/content?id=n_iFPgAACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api"
+            ,
+            "http://books.google.com/books/content?id=W-oGBAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
+        )
+        return arrayOf<Book>(
+            Book(id = "1", isbn = "aaa", title = "hello book1", thumbnailUrl = thumbs[0]),
+            Book(id = "2", isbn = "bbb", title = "hello book2", thumbnailUrl = thumbs[1]),
+            Book(id = "3", isbn = "ccc", title = "hello book3", thumbnailUrl = thumbs[2])
+        )
+    }
+
+    private fun updateUI(bookArray: Array<Book?>) {
         title = mAuth.currentUser?.displayName ?: "no yet login"
+        mBookAdapter = BookListAdapter(this@MainActivity, bookArray.toMutableList(),
+            onItemClicked = { book ->
+                Log.d("hello adapter click", book?.title ?: "no book")
+                Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
+                val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
+                sendIntent.putExtra(EXTRA_BOOK, book?.isbn)
+                startActivity(sendIntent)
+            },
+            onItemLongClicked = { book ->
+                Log.d("hello adapter long click", book?.title ?: "no book")
+                Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
+            })
+        recyclerViewBook.adapter = mBookAdapter
+        recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
     }
 
     private fun testFireStore() {
@@ -88,26 +141,5 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun dataBook() {
-        val thumbs = arrayOf(
-            "http://books.google.com/books/content?id=m1OjDwAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
-            ,
-            "http://books.google.com/books/content?id=n_iFPgAACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api"
-            ,
-            "http://books.google.com/books/content?id=W-oGBAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
-        )
-        val BookArray = mutableListOf<Book>(
-            Book(id = "1", isbn = "aaa", title = "hello book1", scraps = arrayListOf(), thumbnailUrl = thumbs[0]),
-            Book(id = "2", isbn = "bbb", title = "hello book2", scraps = arrayListOf(), thumbnailUrl = thumbs[1]),
-            Book(id = "3", isbn = "ccc", title = "hello book3", scraps = arrayListOf(), thumbnailUrl = thumbs[2])
-        )
-        mBookAdapter = BookListAdapter(this@MainActivity, BookArray,
-            onItemClicked = { book ->
-                Log.d("hello adapter click", book?.title ?: "no book")
-                Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
-            })
-        recyclerViewBook.adapter = mBookAdapter
-        recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
-    }
 
 }

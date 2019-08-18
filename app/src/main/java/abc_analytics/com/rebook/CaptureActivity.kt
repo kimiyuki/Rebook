@@ -24,6 +24,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.firebase.FirebaseApp
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
@@ -51,13 +54,18 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
 
     private lateinit var viewFinder: TextureView
     private var lastImagePath: String = ""
+    private var thumbnailUrl: String = ""
+    private var bookTitle: String = ""
     val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     val adapter = moshi.adapter(GoogleBook::class.java)
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
+    private var isbn: String = ""
     //var fifo: Queue<String> = CircularFifoQueue<String>(2)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         //setSupportActionBar(toolbar)
         viewFinder = findViewById(R.id.view_finder)
         reqPermissionAndStartCamera(viewFinder) // Request camera permissions
@@ -74,22 +82,44 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
-    private fun setBookInfo(bookId: String) {
+    private fun setBookInfo() {
         runBlocking {
-            //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackgroundで実行
+            //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackground(Default)で実行
             async(Dispatchers.Default) {
                 HttpUtil().httpGET(
-                    "https://www.googleapis.com/books/v1/volumes?q=${bookId}"
+                    "https://www.googleapis.com/books/v1/volumes?q=${isbn}"
                 )
             }.await().let {
                 val books = adapter.fromJson(it)
-                val title = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $bookId"
-                val thumbnail = books?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
-                textViewTitleCapture.text = "${title}:${thumbnail}"
+                bookTitle = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $isbn"
+                thumbnailUrl = books?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
+                textViewTitleCapture.text = "${bookTitle}"
                 checkBoxOkTitle.isChecked = true
             }
         }
+        uploadToFirebase()
     }
+
+    private fun uploadToFirebase() {
+        val db = FirebaseFirestore.getInstance()
+        val user = FirebaseAuth.getInstance().currentUser
+        //upload
+        val data = hashMapOf(
+            "isbn" to isbn, "user" to user.hashCode().toString(),
+            "title" to bookTitle, "thumbnailUrl" to thumbnailUrl
+        )
+        //TODO to prevent duplicate data to check if same isbn is in the firebase
+        db.collection("books").add(data)
+            .addOnSuccessListener {
+                Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
+                Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
+                Log.w(TAG, "Error adding document", it)
+            }
+    }
+
 
     private fun startCamera() {
 
@@ -177,7 +207,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                 // resolution based on aspect ration and requested mode
                 setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
             }.build()
-        val imageCapture = ImageCapture(imageCaptureConfig)
+        val imageCapture = ImageCapture(imageCaptureConfig) //same name of this constructing function?
         capture_button.setOnClickListener {
             val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
             imageCapture.takePicture(file,
@@ -192,12 +222,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     override fun onImageSaved(file: File) {
                         val msg = "Photo capture succeeded: ${file.absolutePath}"
                         lastImagePath = file.absolutePath
-
                         Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                         Log.d("CameraXApp", msg)
                         //use thread?
-                        val options = BitmapFactory.Options()
-                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
+//                        val options = BitmapFactory.Options()
+//                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
                         val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                         analyzeImage(bitmap)
                     }
@@ -216,6 +245,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         val sendIntent = Intent(this@CaptureActivity, DocActivity::class.java)
         sendIntent.putExtra(DOC_CONTENT, result.text)
         sendIntent.putExtra(IMG_URI, lastImagePath)
+        sendIntent.putExtra(ISBN_CONTENT, isbn)
         sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
 
         //sendIntent.putExtra("IMG", image )
@@ -279,6 +309,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         }
 
         override fun analyze(imageProxy: ImageProxy?, degrees: Int) {
+            if (checkBoxOkTitle.isChecked) return
             val currentTimestamp = System.currentTimeMillis()
             Log.d("hello analyze", degrees.toString())
             // Calculate the average luma no more often than every second
@@ -298,7 +329,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                                         "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
                                         Toast.LENGTH_LONG
                                     ).show()
-                                    setBookInfo(barcode.displayValue!!)
+                                    isbn = barcode.displayValue!!
+                                    setBookInfo()
+                                    val bundle = Bundle()
+                                    bundle.putString(FirebaseAnalytics.Param.METHOD, "camera")
+                                    firebaseAnalytics.logEvent("barcode_captured", bundle)
                                 }
                             }
                         }

@@ -1,7 +1,13 @@
 package abc_analytics.com.rebook.Model
 
-import android.media.Image
 import java.util.*
 
-class Scrap(val doc: String, val created_at: Date, val image: Image?, val book_id: String?)
+data class Scrap(
+    val doc: String = "",
+    val created_at: Date = Date(),
+    val update_at: Date = Date(),
+    val imageUrl: String = "",
+    val page: Int = 0,
+    val isbn: String = ""
+)
 
