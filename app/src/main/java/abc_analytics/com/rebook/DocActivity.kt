@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -48,14 +49,19 @@ class DocActivity : AppCompatActivity() {
         val storageRef = FirebaseStorage.getInstance().reference.child("images")
         val fileRef = storageRef.child("${user_hash}i_${System.currentTimeMillis()}.png")
         val db = FirebaseFirestore.getInstance()
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        btm.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        byteArrayOutputStream.toByteArray()
 
         //upload image file
         GlobalScope.launch(Dispatchers.Default) {
-            val byteArrayOutputStream = ByteArrayOutputStream()
-            btm.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-            byteArrayOutputStream.toByteArray()
-            fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
-            Toast.makeText(this@DocActivity, "upload Image failed", Toast.LENGTH_LONG).show()
+            val task = fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
+            Looper.prepare()
+            Toast.makeText(
+                this@DocActivity, "upload Image ${task.bytesTransferred / 1000000}M",
+                Toast.LENGTH_LONG
+            ).show()
+            Looper.loop()
         }
 
         //upload scrap
