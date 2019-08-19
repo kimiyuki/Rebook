@@ -14,7 +14,12 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.android.synthetic.main.activity_doc.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
+import java.util.*
 
 class DocActivity : AppCompatActivity() {
     lateinit var btm: Bitmap
@@ -39,35 +44,40 @@ class DocActivity : AppCompatActivity() {
         val title = textViewTitleDoc.text.toString()
         val user_hash = user.hashCode()
         btm = imageViewScrapCaptured.drawable.toBitmap()
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        btm.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-        byteArrayOutputStream.toByteArray()
 
-        //upload setup
         val storageRef = FirebaseStorage.getInstance().reference.child("images")
-        val db = FirebaseFirestore.getInstance()
         val fileRef = storageRef.child("${user_hash}i_${System.currentTimeMillis()}.png")
+        val db = FirebaseFirestore.getInstance()
 
-        //upload
-        val uploadTask = fileRef.putBytes(byteArrayOutputStream.toByteArray())
-        uploadTask.addOnFailureListener {
-            Toast.makeText(this, "upload Image failed", Toast.LENGTH_LONG).show()
-            Log.w(TAG, it.message, it)
-        }.addOnSuccessListener {
-            Log.d(TAG, it.bytesTransferred.div(1000000).toString())
-            val data = hashMapOf(
-                "isbn" to isbn,
-                "user" to user_hash, "title" to title, "doc" to doc, "imagePath" to fileRef.path
-            )
-            db.collection("scraps").add(data)
-                .addOnSuccessListener {
-                    Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
-                    Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
-                }
-                .addOnFailureListener {
-                    Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
-                    Log.w(TAG, "Error adding document", it)
-                }
+        //upload image file
+        GlobalScope.launch(Dispatchers.Default) {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            btm.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+            byteArrayOutputStream.toByteArray()
+            fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
+            Toast.makeText(this@DocActivity, "upload Image failed", Toast.LENGTH_LONG).show()
+        }
+
+        //upload scrap
+        val data = hashMapOf(
+            "isbn" to isbn,
+            "user" to user_hash, "title" to title, "doc" to doc, "imagePath" to fileRef.path,
+            "created_at" to Date(), "upcated_at" to Date()
+        )
+        db.collection("scraps").add(data)
+            .addOnSuccessListener {
+                Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
+                Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
+                Log.w(TAG, "Error adding document", it)
+            }
+        //update book
+        db.collection("books").whereEqualTo("isbn", isbn).get().addOnSuccessListener {
+            val n = it.documents.first().get("numScraps", Int::class.java) ?: 0
+            it.documents.first().reference.update(mapOf("updated_at" to Date(), "numScraps" to (n + 1)))
+            Toast.makeText(this, "update succeed", Toast.LENGTH_LONG).show()
         }
     }
 

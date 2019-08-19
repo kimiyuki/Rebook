@@ -1,12 +1,14 @@
 package abc_analytics.com.rebook
 
 import abc_analytics.com.rebook.Model.Scrap
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_scrap_list.*
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +27,11 @@ class ScrapListActivity : AppCompatActivity() {
 
         val intent = intent
         val isbn: String = intent.getStringExtra(EXTRA_BOOK)
+        fabScrapList.setOnClickListener { view ->
+            startActivity(Intent(this, CaptureActivity::class.java))
+            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                .setAction("Action", null).show()
+        }
         GlobalScope.launch(Dispatchers.Main) {
             val scrapArray = dataScrapFromFB(isbn)
             updateUI(scrapArray)

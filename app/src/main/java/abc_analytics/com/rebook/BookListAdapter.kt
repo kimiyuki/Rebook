@@ -21,6 +21,7 @@ class BookListAdapter(
 
     class BookViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val bookTitle: TextView = itemView.textViewBookTitle
+        val numScraps: TextView = itemView.textViewNumScraps
         fun updateWithUrl(url: String?) {
             if (url == null || url.isEmpty()) return
             Picasso.get().load(url).into(itemView.imageViewThumbNail)

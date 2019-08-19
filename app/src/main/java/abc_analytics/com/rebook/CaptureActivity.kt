@@ -104,20 +104,26 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         val db = FirebaseFirestore.getInstance()
         val user = FirebaseAuth.getInstance().currentUser
         //upload
-        val data = hashMapOf(
+        val data = mutableMapOf(
             "isbn" to isbn, "user" to user.hashCode().toString(),
-            "title" to bookTitle, "thumbnailUrl" to thumbnailUrl
+            "title" to bookTitle, "thumbnailUrl" to thumbnailUrl,
+            "created_at" to Date(), "updated_at" to Date(), "numScraps" to 0
         )
         //TODO to prevent duplicate data to check if same isbn is in the firebase
-        db.collection("books").add(data)
-            .addOnSuccessListener {
-                Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
-                Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
+        val query = db.collection("books").whereEqualTo("isbn", isbn)
+        query.get().addOnSuccessListener { documents ->
+            if (documents.size() < 1) {
+                db.collection("books").add(data)
+                    .addOnSuccessListener {
+                        Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
+                        Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
+                        Log.w(TAG, "Error adding document", it)
+                    }
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
-                Log.w(TAG, "Error adding document", it)
-            }
+        }
     }
 
 
