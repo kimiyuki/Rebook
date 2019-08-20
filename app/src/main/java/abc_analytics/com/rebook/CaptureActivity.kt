@@ -67,8 +67,8 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
 
-        isbn = intent.getStringExtra(ISBN_CONTENT)
-        val book_title = intent.getStringExtra(TITLE_CONTENT)
+        isbn = intent.getStringExtra(ISBN_CONTENT) ?: ""
+        val book_title = intent.getStringExtra(TITLE_CONTENT) ?: ""
         if (isbn != "") {
             textViewTitleCapture.text = book_title
             checkBoxOkTitle.isChecked = true
@@ -219,6 +219,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                 setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
             }.build()
         val imageCapture = ImageCapture(imageCaptureConfig) //same name of this constructing function?
+        //val display = DisplayMetrics()
+        //imageCapture.setTargetRotation(90)
+        Log.d(TAG, "rotation: ${viewFinder.display.rotation}")
+        imageCapture.setTargetRotation(viewFinder.display.rotation)
         floatingActionButtonCapture.setOnClickListener {
             val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
             imageCapture.takePicture(file,
@@ -253,7 +257,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             return
         }
         Log.d("aaa result text", result.text.toString())
-        val sendIntent = Intent(this@CaptureActivity, DocActivity::class.java)
+        val sendIntent = Intent(this@CaptureActivity, ScrapActivity::class.java)
         sendIntent.putExtra(DOC_CONTENT, result.text)
         sendIntent.putExtra(IMG_URI, lastImagePath)
         sendIntent.putExtra(ISBN_CONTENT, isbn)
@@ -286,6 +290,15 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             .addOnFailureListener { Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show() }
     }
 
+    private fun getViewfinderRotation(): Int {
+        return when (viewFinder.display.rotation) {
+            Surface.ROTATION_0 -> 0
+            Surface.ROTATION_90 -> 90
+            Surface.ROTATION_180 -> 180
+            Surface.ROTATION_270 -> 270
+            else -> 0
+        }
+    }
 
     private fun updateTransform() {
         Log.v(TAG, "updateTransform start")
@@ -296,13 +309,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         val centerY = viewFinder.height / 2f
 
         // Correct preview output to account for display rotation
-        val rotationDegrees = when (viewFinder.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> return
-        }
+        val rotationDegrees = getViewfinderRotation()
         Log.v(TAG, "rotation Degree ${rotationDegrees}")
         matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
 

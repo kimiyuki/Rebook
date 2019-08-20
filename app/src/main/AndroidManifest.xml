@@ -33,7 +33,7 @@
         </activity>
         <activity android:name=".LoginActivity">
         </activity>
-        <activity android:name=".DocActivity">
+        <activity android:name=".ScrapActivity">
         </activity>
         <activity android:name=".BarcodeActivity">
         </activity>

@@ -1,34 +1,35 @@
 package abc_analytics.com.rebook
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.drawable.toBitmap
+import androidx.core.net.toUri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import kotlinx.android.synthetic.main.activity_doc.*
+import kotlinx.android.synthetic.main.activity_scrap.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.*
 
-class DocActivity : AppCompatActivity() {
-    lateinit var btm: Bitmap
+class ScrapActivity : AppCompatActivity() {
     var isbn: String = ""
+    var fpath: String = ""
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_doc)
+        setContentView(R.layout.activity_scrap)
         backButton.setOnClickListener { v ->
             startActivity(Intent(this, MainActivity::class.java))
         }
@@ -44,21 +45,22 @@ class DocActivity : AppCompatActivity() {
         val doc = textViewDoc.text.toString()
         val title = textViewTitleDoc.text.toString()
         val user_hash = user.hashCode()
-        btm = imageViewScrapCaptured.drawable.toBitmap()
 
-        val storageRef = FirebaseStorage.getInstance().reference.child("images")
-        val fileRef = storageRef.child("${user_hash}i_${System.currentTimeMillis()}.png")
+        val storageRef = FirebaseStorage.getInstance().reference
+            .child("images")
+            .child(user_hash.toString())
+            .child(isbn)
+        val fileRef = storageRef.child("${System.currentTimeMillis()}.png")
         val db = FirebaseFirestore.getInstance()
         val byteArrayOutputStream = ByteArrayOutputStream()
-        btm.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-        byteArrayOutputStream.toByteArray()
 
         //upload image file
         GlobalScope.launch(Dispatchers.Default) {
-            val task = fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
+            //val task = fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
+            val task = fileRef.putFile(Uri.fromFile(File(fpath))).await()
             Looper.prepare()
             Toast.makeText(
-                this@DocActivity, "upload Image ${task.bytesTransferred / 1000000}M",
+                this@ScrapActivity, "upload Image ${task.bytesTransferred / 1000000}M",
                 Toast.LENGTH_LONG
             ).show()
             Looper.loop()
@@ -91,14 +93,14 @@ class DocActivity : AppCompatActivity() {
         super.onResume()
         val intent = intent
         val text = intent.getStringExtra(DOC_CONTENT)
-        val fpath = intent.getStringExtra(IMG_URI)
-        val title = intent.getStringExtra(TITLE_CONTENT)
+        fpath = intent.getStringExtra(IMG_URI)
+        title = intent.getStringExtra(TITLE_CONTENT)
         isbn = intent.getStringExtra(ISBN_CONTENT)
         Log.d("hello text", text?.toString() ?: "no text")
         if (text != null) textViewDoc.text = text
         if (fpath != null) {
-            btm = BitmapFactory.decodeFile(fpath)
-            imageViewScrapCaptured.setImageBitmap(btm)
+            val prop = ImageView.ROTATION
+            imageViewScrapCaptured.setImageURI(fpath.toUri())
         }
         textViewTitleDoc.text = title
     }

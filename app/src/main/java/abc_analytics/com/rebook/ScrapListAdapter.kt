@@ -13,7 +13,7 @@ import kotlinx.android.synthetic.main.row_scrap.view.*
 
 class ScrapListAdapter(
     context: Context, var scraps: List<Scrap?>, val onItemClicked: (Scrap?) -> Unit
-) : RecyclerView.Adapter<ScrapListAdapter.ScrapViewHolder>() {
+) : RecyclerView.Adapter<ScrapListAdapter.ScrapListViewHolder>() {
 
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
 
@@ -21,13 +21,13 @@ class ScrapListAdapter(
         scraps = scraps.sortedBy { it?.page }
     }
 
-    class ScrapViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ScrapListViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val doc: TextView = itemView.textViewScrapDoc
         val n: TextView = itemView.textViewScrapPage
         val storage = FirebaseStorage.getInstance().reference
         fun updateWithUrl(path: String?) {
             if (path == null && path == "") return
-            val newPath = path?.replace("/images/", "/images/thumb_")
+            val newPath = path?.replace("""([^/]+\.png)""".toRegex(), "thumb_$1")
             storage.child(newPath!!).downloadUrl.addOnSuccessListener {
                 Picasso.get().load(it).into(itemView.imageViewScrapImage)
             }
@@ -35,16 +35,17 @@ class ScrapListAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScrapViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScrapListViewHolder {
         val view = mLayoutInflater.inflate(R.layout.row_scrap, parent, false)
-        val holder = ScrapListAdapter.ScrapViewHolder(view)
+        view.layoutParams.height = parent.measuredHeight / 4
+        val holder = ScrapListAdapter.ScrapListViewHolder(view)
         view.setOnClickListener { scraps[holder.adapterPosition].also { onItemClicked(it) } }
         return holder
     }
 
     override fun getItemCount() = scraps.size
 
-    override fun onBindViewHolder(holder: ScrapViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: ScrapListViewHolder, position: Int) {
         if (scraps[position] == null) return
         holder.apply {
             updateWithUrl(scraps[position]?.imagePath)

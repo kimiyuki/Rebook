@@ -12,7 +12,7 @@
             app:srcCompat="@drawable/ic_launcher_background"
             android:id="@+id/imageViewScrapImage"
             android:layout_weight="2"
-    />
+            android:maxHeight="100dp"/>
     <TextView
             android:text="TextView"
             android:layout_width="wrap_content"
