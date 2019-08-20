@@ -66,6 +66,14 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         Log.d(TAG, "captureActivity onCreate started")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
+
+        isbn = intent.getStringExtra(ISBN_CONTENT)
+        val book_title = intent.getStringExtra(TITLE_CONTENT)
+        if (isbn != "") {
+            textViewTitleCapture.text = book_title
+            checkBoxOkTitle.isChecked = true
+        }
+
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         //setSupportActionBar(toolbar)
         viewFinder = findViewById(R.id.view_finder)

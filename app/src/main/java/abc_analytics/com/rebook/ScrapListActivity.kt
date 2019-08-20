@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_scrap_list.*
 import kotlinx.coroutines.Dispatchers
@@ -20,20 +19,23 @@ import kotlinx.coroutines.withContext
 class ScrapListActivity : AppCompatActivity() {
     lateinit var mScrapAdapter: ScrapListAdapter
     private val db = FirebaseFirestore.getInstance()
+    private lateinit var isbn: String
+    private lateinit var bookTitle: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scrap_list)
 
-        val intent = intent
-        val isbn: String = intent.getStringExtra(EXTRA_BOOK)
+        isbn = intent.getStringExtra(EXTRA_BOOK)
         fabScrapList.setOnClickListener { view ->
-            startActivity(Intent(this, CaptureActivity::class.java))
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+            val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
+            sendIntent.putExtra(ISBN_CONTENT, isbn)
+            sendIntent.putExtra(TITLE_CONTENT, bookTitle)
+            startActivityForResult(sendIntent, SCRAPLIST_CAPTURE_REQUEST_CODE)
         }
         GlobalScope.launch(Dispatchers.Main) {
             val scrapArray = dataScrapFromFB(isbn)
+            dataBookFromFB(isbn)
             updateUI(scrapArray)
         }
     }
@@ -57,5 +59,14 @@ class ScrapListActivity : AppCompatActivity() {
         Log.d(TAG, "isbn ${isbn}")
         Log.d(TAG, "size ${snapshots.size}")
         return snapshots
+    }
+
+    private suspend fun dataBookFromFB(isbn: String) {
+        val snapshots = withContext(Dispatchers.Default) {
+            val s = db.collection("books").whereEqualTo("isbn", isbn).get().await()
+            if (s.size() > 0) {
+                bookTitle = s.documents.first().get("title").toString()
+            }
+        }
     }
 }

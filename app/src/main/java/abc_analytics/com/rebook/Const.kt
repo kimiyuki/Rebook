@@ -13,6 +13,8 @@ const val IMG_URI = "abc_analytics.com.rebook.img_uri"
 const val EXTRA_BOOK = "abc_analytics.com.rebook.extra_book"
 const val MAIN_DOC_REQUEST_CODE = 100
 const val PERMISSIONS_REQUEST_CODE = 111
+const val SCRAPLIST_CAPTURE_REQUEST_CODE = 112
+
 
 // This is an arbitrary number we are using to keep tab of the permission
 // request. Where an app has multiple context for requesting permission,
