@@ -63,6 +63,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     //var fifo: Queue<String> = CircularFifoQueue<String>(2)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "captureActivity onCreate started")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
@@ -71,10 +72,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         reqPermissionAndStartCamera(viewFinder) // Request camera permissions
         viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateTransform() }
 
-        testButton.setOnClickListener {
-            startActivity(Intent(this, DocActivity::class.java))
-        }
-        Log.d("hello use case", "aaa")
         checkBoxOkTitle.setOnCheckedChangeListener { buttonView, isChecked ->
             if (!isChecked) {
                 textViewTitleCapture.text = ""
@@ -214,7 +211,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                 setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
             }.build()
         val imageCapture = ImageCapture(imageCaptureConfig) //same name of this constructing function?
-        capture_button.setOnClickListener {
+        floatingActionButtonCapture.setOnClickListener {
             val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
             imageCapture.takePicture(file,
                 object : ImageCapture.OnImageSavedListener {
@@ -266,7 +263,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             return
         }
 
-        Log.d("hello analyze", "aaa")
         FirebaseApp.initializeApp(this)
         val firebaseVisionImage = FirebaseVisionImage.fromBitmap(image)
         val options =
@@ -284,6 +280,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
 
 
     private fun updateTransform() {
+        Log.v(TAG, "updateTransform start")
         val matrix = Matrix()
 
         // Compute the center of the view finder
@@ -298,6 +295,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             Surface.ROTATION_270 -> 270
             else -> return
         }
+        Log.v(TAG, "rotation Degree ${rotationDegrees}")
         matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
 
         // Finally, apply transformations to our TextureView
@@ -317,7 +315,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         override fun analyze(imageProxy: ImageProxy?, degrees: Int) {
             if (checkBoxOkTitle.isChecked) return
             val currentTimestamp = System.currentTimeMillis()
-            Log.d("hello analyze", degrees.toString())
             // Calculate the average luma no more often than every second
             if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
                 val mediaImage = imageProxy?.image
