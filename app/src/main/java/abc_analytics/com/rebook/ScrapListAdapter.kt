@@ -31,14 +31,13 @@ class ScrapListAdapter(
             storage.child(newPath!!).downloadUrl.addOnSuccessListener {
                 Picasso.get().load(it).into(itemView.imageViewScrapImage)
             }
-
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScrapListViewHolder {
         val view = mLayoutInflater.inflate(R.layout.row_scrap, parent, false)
         view.layoutParams.height = parent.measuredHeight / 4
-        val holder = ScrapListAdapter.ScrapListViewHolder(view)
+        val holder = ScrapListViewHolder(view)
         view.setOnClickListener { scraps[holder.adapterPosition].also { onItemClicked(it) } }
         return holder
     }
