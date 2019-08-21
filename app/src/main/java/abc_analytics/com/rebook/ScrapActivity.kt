@@ -44,11 +44,11 @@ class ScrapActivity : AppCompatActivity() {
         //data setup
         val doc = textViewDoc.text.toString()
         val title = textViewTitleDoc.text.toString()
-        val user_hash = user.hashCode()
+        val userString = user.toString()
 
         val storageRef = FirebaseStorage.getInstance().reference
             .child("images")
-            .child(user_hash.toString())
+            .child(userString)
             .child(isbn)
         val fileRef = storageRef.child("${System.currentTimeMillis()}.png")
         val db = FirebaseFirestore.getInstance()
@@ -69,7 +69,7 @@ class ScrapActivity : AppCompatActivity() {
         //upload scrap
         val data = hashMapOf(
             "isbn" to isbn,
-            "user" to user_hash, "title" to title, "doc" to doc, "imagePath" to fileRef.path,
+            "user" to userString, "title" to title, "doc" to doc, "imagePath" to fileRef.path,
             "created_at" to Date(), "upcated_at" to Date()
         )
         db.collection("scraps").add(data)

@@ -56,6 +56,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     private var lastImagePath: String = ""
     private var thumbnailUrl: String = ""
     private var bookTitle: String = ""
+    private var authors: List<String> = listOf()
     val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     val adapter = moshi.adapter(GoogleBook::class.java)
     private lateinit var firebaseAnalytics: FirebaseAnalytics
@@ -88,37 +89,41 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     private fun setBookInfo() {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            Toast.makeText(this, "loginしてください", Toast.LENGTH_LONG).show()
+            val intent = Intent(applicationContext, LoginActivity::class.java)
+            startActivity(intent)
+        }
         runBlocking {
             //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackground(Default)で実行
             async(Dispatchers.Default) {
-                HttpUtil().httpGET(
-                    "https://www.googleapis.com/books/v1/volumes?q=${isbn}"
-                )
+                HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbn}")
             }.await().let {
                 val books = adapter.fromJson(it)
                 bookTitle = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $isbn"
                 thumbnailUrl = books?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
+                authors = books?.items?.get(0)?.volumeInfo?.authors ?: listOf()
                 textViewTitleCapture.text = "${bookTitle}"
                 checkBoxOkTitle.isChecked = true
             }
         }
-        uploadToFirebase()
+        uploadToFirebase(user!!.uid)
     }
 
-    private fun uploadToFirebase() {
+    private fun uploadToFirebase(uid: String) {
         val db = FirebaseFirestore.getInstance()
-        val user = FirebaseAuth.getInstance().currentUser
         //upload
         val data = mutableMapOf(
-            "isbn" to isbn, "user" to user.hashCode().toString(),
-            "title" to bookTitle, "thumbnailUrl" to thumbnailUrl,
+            "isbn" to isbn, "user" to uid,
+            "title" to bookTitle, "thumbnailUrl" to thumbnailUrl, "authors" to authors,
             "created_at" to Date(), "updated_at" to Date(), "numScraps" to 0
         )
-        //TODO to prevent duplicate data to check if same isbn is in the firebase
-        val query = db.collection("books").whereEqualTo("isbn", isbn)
+        val doc = db.collection("users").document(uid)
+        val query = doc.collection("books").whereEqualTo("isbn", isbn)
         query.get().addOnSuccessListener { documents ->
             if (documents.size() < 1) {
-                db.collection("books").add(data)
+                doc.collection("books").add(data)
                     .addOnSuccessListener {
                         Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
                         Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
@@ -142,15 +147,13 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
 
         val analyzerConfig = ImageAnalysisConfig.Builder().apply {
             // Use a worker thread for image analysis to prevent glitches
-            val analyzerThread = HandlerThread("LuminosityAnalysis").apply { start() }
+            val analyzerThread = HandlerThread("barCodeDetector").apply { start() }
             setCallbackHandler(Handler(analyzerThread.looper))
             // In our analysis, we care more about the latest image than
             // analyzing *every* image
             setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
         }.build()
-        Log.d("hello", "world1")
         val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
-            Log.d("hello", "world2")
             analyzer = BarcodeDetector()
         }
         // Bind use cases to lifecycle
@@ -230,7 +233,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     override fun onError(error: ImageCapture.UseCaseError, message: String, exc: Throwable?) {
                         val msg = "Photo capture failed: $message"
                         Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                        Log.e("CameraXApp", msg)
                         exc?.printStackTrace()
                     }
 
