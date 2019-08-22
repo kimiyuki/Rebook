@@ -11,7 +11,10 @@ const val TITLE_CONTENT = "abc_analytics.com.rebook.title_content"
 const val ISBN_CONTENT = "abc_analytics.com.rebook.isbn_content"
 const val IMG_URI = "abc_analytics.com.rebook.img_uri"
 const val EXTRA_BOOK = "abc_analytics.com.rebook.extra_book"
-const val MAIN_DOC_REQUEST_CODE = 100
+const val PAGENUMBER_CONTENT = "abc_analytics.com.rebook.extra_pageNumber"
+const val FROM_ACTIVITY = "abc_analytics.com.rebook.from_activity"
+const val CAPTURE_DETAIL_INTENT = 100
+const val SCRAPLIST_DETAIL_INTENT = 101
 const val PERMISSIONS_REQUEST_CODE = 111
 const val SCRAPLIST_CAPTURE_REQUEST_CODE = 112
 // This is an arbitrary number we are using to keep tab of the permission

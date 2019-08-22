@@ -5,10 +5,10 @@ import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import android.view.View
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
@@ -26,6 +26,8 @@ class ScrapDetailActivity : AppCompatActivity() {
     var isbn: String = ""
     var fpath: String = ""
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
+    var pageNumber: Int = 0
+    val storageRef = FirebaseStorage.getInstance().reference
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scrap_detail)
@@ -87,8 +89,17 @@ class ScrapDetailActivity : AppCompatActivity() {
         }
     }
 
-    fun downLoadFile() {
-
+    fun downLoadFile(fpath: String) {
+        //val prop = ImageView.ROTATION
+        val islandRef = storageRef.child(fpath)
+        if (islandRef.name != null) {
+            val localFile = File.createTempFile("images", "jpg")
+            islandRef.getFile(localFile).addOnSuccessListener {
+                imageViewScrapCaptured.setImageURI(localFile.toUri())
+            }.addOnFailureListener {
+                // Handle any errors
+            }
+        }
     }
 
     override fun onResume() {
@@ -98,12 +109,14 @@ class ScrapDetailActivity : AppCompatActivity() {
         fpath = intent.getStringExtra(IMG_URI)
         title = intent.getStringExtra(TITLE_CONTENT)
         isbn = intent.getStringExtra(ISBN_CONTENT)
-        Log.d("hello text", text?.toString() ?: "no text")
+        pageNumber = intent.getIntExtra(PAGENUMBER_CONTENT, 0)
+        val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
+        Log.d(TAG, "fpath:${fpath}")
+        okButton.isVisible = (fromActivity == "CaptureActivity")
         if (text != null) textViewDoc.text = text
-        if (fpath != null) {
-            val prop = ImageView.ROTATION
-            imageViewScrapCaptured.setImageURI(fpath.toUri())
-        }
+        downLoadFile(fpath)
         textViewTitleDoc.text = title
+        textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
+        textViewPageNumber.text = "page:${pageNumber}"
     }
 }

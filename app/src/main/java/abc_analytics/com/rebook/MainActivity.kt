@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
                 //Log.d("hello adapter click", book?.title ?: "no book")
                 //Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
                 val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
+                sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
                 sendIntent.putExtra(EXTRA_BOOK, book)
                 startActivity(sendIntent)
             },

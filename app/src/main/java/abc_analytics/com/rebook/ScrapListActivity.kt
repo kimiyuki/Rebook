@@ -59,7 +59,8 @@ class ScrapListActivity : AppCompatActivity() {
                 sendIntent.putExtra(IMG_URI, scrap?.imagePath)
                 sendIntent.putExtra(ISBN_CONTENT, book.isbn)
                 sendIntent.putExtra(TITLE_CONTENT, book.title)
-                startActivityForResult(sendIntent, MAIN_DOC_REQUEST_CODE)
+                sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+                startActivityForResult(sendIntent, SCRAPLIST_DETAIL_INTENT)
             })
         recyclerViewScrap.adapter = mScrapAdapter
         recyclerViewScrap.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)

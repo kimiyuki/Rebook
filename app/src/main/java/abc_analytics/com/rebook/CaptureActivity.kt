@@ -266,7 +266,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
 
         //sendIntent.putExtra("IMG", image )
-        startActivityForResult(sendIntent, MAIN_DOC_REQUEST_CODE)
+        startActivityForResult(sendIntent, CAPTURE_DETAIL_INTENT)
         //textViewAnswer.text = result.text.toString()
         Toast.makeText(this@CaptureActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
     }
