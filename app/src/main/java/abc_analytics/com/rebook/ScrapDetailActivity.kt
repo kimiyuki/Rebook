@@ -112,11 +112,17 @@ class ScrapDetailActivity : AppCompatActivity() {
         pageNumber = intent.getIntExtra(PAGENUMBER_CONTENT, 0)
         val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
         Log.d(TAG, "fpath:${fpath}")
-        okButton.isVisible = (fromActivity == "CaptureActivity")
-        if (text != null) textViewDoc.text = text
-        downLoadFile(fpath)
         textViewTitleDoc.text = title
         textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
         textViewPageNumber.text = "page:${pageNumber}"
+        Log.d(TAG, "fromActivity:${fromActivity}")
+        if (fromActivity == "ScrapListActivity") {
+            okButton.isVisible = false
+            downLoadFile(fpath)
+        } else if (fromActivity == "CaptureActivity") {
+            okButton.isVisible = true
+            imageViewScrapCaptured.setImageURI(fpath.toUri())
+        }
+        if (text != null) textViewDoc.text = text
     }
 }

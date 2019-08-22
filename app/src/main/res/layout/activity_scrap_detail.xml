@@ -39,42 +39,64 @@
             android:layout_marginTop="24dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
+            android:fillViewport="true"
             app:layout_constraintTop_toBottomOf="@id/textViewTitleDoc">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/constarint3"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="643dp"
+                tools:layout_editor_absoluteY="1dp">
 
             <ImageView
                     android:id="@+id/imageViewScrapCaptured"
+                    android:adjustViewBounds="true"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    app:srcCompat="@color/design_default_color_primary_dark" />
+                    android:layout_height="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:cropToPadding="true"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@color/design_default_color_primary_dark"
+                    tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
             <TextView
                     android:id="@+id/textViewDoc"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="8dp"
                     android:text="document"
                     android:textAlignment="textStart"
-                    android:textIsSelectable="true" />
+                    android:textIsSelectable="true"
+                    app:layout_constraintBottom_toTopOf="@+id/okButton"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/imageViewScrapCaptured" />
 
             <Button
                     android:id="@+id/okButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
                     android:layout_marginStart="16dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginEnd="16dp"
                     android:layout_marginBottom="16dp"
                     android:gravity="center"
-                    android:text="upload" />
+                    android:text="upload"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/textViewDoc" />
 
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>
 

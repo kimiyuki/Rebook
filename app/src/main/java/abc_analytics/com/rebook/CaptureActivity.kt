@@ -263,6 +263,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         sendIntent.putExtra(DOC_CONTENT, result.text)
         sendIntent.putExtra(IMG_URI, lastImagePath)
         sendIntent.putExtra(ISBN_CONTENT, isbn)
+        sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
         sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
 
         //sendIntent.putExtra("IMG", image )
