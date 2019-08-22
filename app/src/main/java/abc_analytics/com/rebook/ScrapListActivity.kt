@@ -32,7 +32,7 @@ class ScrapListActivity : AppCompatActivity() {
         book = intent.getParcelableExtra<Book>(EXTRA_BOOK)
         fabScrapList.setOnClickListener { view ->
             val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
-            sendIntent.putExtra(ISBN_CONTENT, book)
+            sendIntent.putExtra(EXTRA_BOOK, book)
             startActivityForResult(sendIntent, SCRAPLIST_CAPTURE_REQUEST_CODE)
         }
 

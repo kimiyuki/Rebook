@@ -1,6 +1,10 @@
 package abc_analytics.com.rebook
 
 import android.app.Application
+import com.bumptech.glide.annotation.GlideModule
+import com.bumptech.glide.module.AppGlideModule
+
+
 
 
 class ReBook:Application() {
@@ -23,3 +27,5 @@ class ReBook:Application() {
     }
 }
 
+@GlideModule
+class MyAppGlideModule : AppGlideModule()// leave empty for now

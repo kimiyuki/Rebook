@@ -1,5 +1,6 @@
 package abc_analytics.com.rebook
 
+import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.GoogleBook
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -55,7 +56,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     private var lastImagePath: String = ""
     private var thumbnailUrl: String = ""
     private var bookTitle: String = ""
-    private var authors: List<String> = listOf()
+    private var authors: List<String> = listOf<String>()
     val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     val adapter = moshi.adapter(GoogleBook::class.java)
     private lateinit var firebaseAnalytics: FirebaseAnalytics
@@ -67,10 +68,9 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
 
-        isbn = intent.getStringExtra(ISBN_CONTENT) ?: ""
-        val book_title = intent.getStringExtra(TITLE_CONTENT) ?: ""
-        if (isbn != "") {
-            textViewTitleCapture.text = book_title
+        val tmpBook = intent.getParcelableExtra<Book>(EXTRA_BOOK)
+        if (tmpBook != null) {
+            textViewTitleCapture.text = tmpBook.title
             checkBoxOkTitle.isChecked = true
         }
 
@@ -100,10 +100,12 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             async(Dispatchers.Default) {
                 HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbn}")
             }.await().let {
-                val books = adapter.fromJson(it)
-                bookTitle = books?.items?.get(0)?.volumeInfo?.title ?: "no book found for $isbn"
-                thumbnailUrl = books?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
-                authors = books?.items?.get(0)?.volumeInfo?.authors ?: listOf()
+                val googleBooks = adapter.fromJson(it)
+                bookTitle =
+                    googleBooks?.items?.get(0)?.volumeInfo?.title ?: "no book found for $isbn"
+                thumbnailUrl =
+                    googleBooks?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
+                authors = googleBooks?.items?.get(0)?.volumeInfo?.authors ?: listOf()
                 textViewTitleCapture.text = "${bookTitle}"
                 checkBoxOkTitle.isChecked = true
             }
