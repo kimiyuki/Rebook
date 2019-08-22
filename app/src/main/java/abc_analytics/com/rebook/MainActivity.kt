@@ -45,43 +45,30 @@ class MainActivity : AppCompatActivity() {
         //val bookArray = dataBook()
         GlobalScope.launch(Dispatchers.Main) {
             val bookArray = dataBookFromFB()
+            Log.d(TAG, bookArray.toString())
             checkPerm()
             updateUI(bookArray.toTypedArray())
         }
     }
 
     private suspend fun dataBookFromFB(): List<Book?> {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) return listOf<Book>()
         val snapshots = withContext(Dispatchers.Default) {
-            val ref = db.collection("books")
-            ref.get().await().documents.map { it.toObject(Book::class.java) }
+            val ref = db.collection("users").document(user.uid)
+            ref.collection("books").get().await().documents.map { it.toObject(Book::class.java) }
         }
         return snapshots
-    }
-
-
-    private fun dataBook(): Array<Book> {
-        val thumbs = arrayOf(
-            "http://books.google.com/books/content?id=m1OjDwAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
-            ,
-            "http://books.google.com/books/content?id=n_iFPgAACAAJ&printsec=frontcover&img=1&zoom=5&source=gbs_api"
-            ,
-            "http://books.google.com/books/content?id=W-oGBAAAQBAJ&printsec=frontcover&img=1&zoom=5&edge=curl&source=gbs_api"
-        )
-        return arrayOf<Book>(
-            Book(id = "1", isbn = "aaa", title = "hello book1", thumbnailUrl = thumbs[0]),
-            Book(id = "2", isbn = "bbb", title = "hello book2", thumbnailUrl = thumbs[1]),
-            Book(id = "3", isbn = "ccc", title = "hello book3", thumbnailUrl = thumbs[2])
-        )
     }
 
     private fun updateUI(bookArray: Array<Book?>) {
         title = mAuth.currentUser?.displayName ?: "no yet login"
         mBookAdapter = BookListAdapter(this@MainActivity, bookArray.toMutableList(),
             onItemClicked = { book ->
-                Log.d("hello adapter click", book?.title ?: "no book")
-                Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
+                //Log.d("hello adapter click", book?.title ?: "no book")
+                //Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
                 val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
-                sendIntent.putExtra(EXTRA_BOOK, book?.isbn)
+                sendIntent.putExtra(EXTRA_BOOK, book)
                 startActivity(sendIntent)
             },
             onItemLongClicked = { book ->
@@ -90,20 +77,6 @@ class MainActivity : AppCompatActivity() {
             })
         recyclerViewBook.adapter = mBookAdapter
         recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
-    }
-
-    private fun testFireStore() {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("scraps")
-            .get()
-            .addOnSuccessListener { result ->
-                for (document in result) {
-                    Log.d(TAG, "${document.id} => ${document.data}")
-                }
-            }
-            .addOnFailureListener { exception ->
-                Log.w(TAG, "Error getting documents.", exception)
-            }
     }
 
     private fun checkPerm() {

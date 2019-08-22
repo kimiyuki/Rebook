@@ -1,7 +1,6 @@
 package abc_analytics.com.rebook
 
 import abc_analytics.com.rebook.Model.GoogleBook
-import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -45,10 +44,10 @@ import java.util.concurrent.TimeUnit
 // This is an arbitrary number we are using to keep tab of the permission
 // request. Where an app has multiple context for requesting permission,
 // this can help differentiate the different contexts
-private const val REQUEST_CODE_PERMISSIONS = 10
+//private const val REQUEST_CODE_PERMISSIONS = 10
 
 // This is an array of all the permission specified in the manifest
-private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+//private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
 class CaptureActivity : AppCompatActivity(), LifecycleOwner {
 
@@ -78,6 +77,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
         //setSupportActionBar(toolbar)
         viewFinder = findViewById(R.id.view_finder)
+
         reqPermissionAndStartCamera(viewFinder) // Request camera permissions
         viewFinder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateTransform() }
 
@@ -259,7 +259,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             return
         }
         Log.d("aaa result text", result.text.toString())
-        val sendIntent = Intent(this@CaptureActivity, ScrapActivity::class.java)
+        val sendIntent = Intent(this@CaptureActivity, ScrapDetailActivity::class.java)
         sendIntent.putExtra(DOC_CONTENT, result.text)
         sendIntent.putExtra(IMG_URI, lastImagePath)
         sendIntent.putExtra(ISBN_CONTENT, isbn)
@@ -303,13 +303,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     private fun updateTransform() {
-        Log.v(TAG, "updateTransform start")
         val matrix = Matrix()
-
         // Compute the center of the view finder
         val centerX = viewFinder.width / 2f
         val centerY = viewFinder.height / 2f
-
         // Correct preview output to account for display rotation
         val rotationDegrees = getViewfinderRotation()
         Log.v(TAG, "rotation Degree ${rotationDegrees}")
@@ -317,10 +314,12 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
 
         // Finally, apply transformations to our TextureView
         viewFinder.setTransform(matrix)
+        //viewFinder.layoutParams.width = viewFinder.parent.layout
     }
 
     inner class BarcodeDetector : ImageAnalysis.Analyzer {
         private var lastAnalyzedTimestamp = 0L
+        private var lastBarcodeValue = ""
         private fun degreesToFirebaseRotation(degrees: Int): Int = when (degrees) {
             0 -> FirebaseVisionImageMetadata.ROTATION_0
             90 -> FirebaseVisionImageMetadata.ROTATION_90
@@ -349,8 +348,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                                         "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
                                         Toast.LENGTH_LONG
                                     ).show()
-                                    isbn = barcode.displayValue!!
-                                    setBookInfo()
+                                    if (isbn != barcode.displayValue!!) {
+                                        isbn = barcode.displayValue!!
+                                        setBookInfo()
+                                    }
                                     val bundle = Bundle()
                                     bundle.putString(FirebaseAnalytics.Param.METHOD, "camera")
                                     firebaseAnalytics.logEvent("barcode_captured", bundle)

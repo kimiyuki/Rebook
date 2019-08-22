@@ -4,15 +4,16 @@
               android:orientation="horizontal"
               android:weightSum="10"
               android:layout_width="match_parent"
-              android:layout_height="wrap_content" android:id="@+id/row_book">
+        android:layout_height="wrap_content"
+        android:id="@+id/row_scrap">
 
     <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:srcCompat="@drawable/ic_launcher_background"
             android:id="@+id/imageViewScrapImage"
+            android:layout_width="120dp"
+            android:layout_height="160dp"
             android:layout_weight="2"
-            android:maxHeight="100dp"/>
+            android:maxHeight="100dp"
+            app:srcCompat="@drawable/ic_launcher_background" />
     <TextView
             android:text="TextView"
             android:layout_width="wrap_content"

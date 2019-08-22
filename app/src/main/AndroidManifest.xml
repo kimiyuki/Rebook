@@ -12,8 +12,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET"/>
 
+
     <application
             android:allowBackup="true"
+            android:largeHeap="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -33,9 +35,7 @@
         </activity>
         <activity android:name=".LoginActivity">
         </activity>
-        <activity android:name=".ScrapActivity">
-        </activity>
-        <activity android:name=".BarcodeActivity">
+        <activity android:name=".ScrapDetailActivity">
         </activity>
         <activity android:name=".CaptureActivity">
         </activity>

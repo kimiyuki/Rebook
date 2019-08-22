@@ -1,6 +1,5 @@
 package abc_analytics.com.rebook
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
@@ -14,7 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import kotlinx.android.synthetic.main.activity_scrap.*
+import kotlinx.android.synthetic.main.activity_scrap_detail.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -23,18 +22,16 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
-class ScrapActivity : AppCompatActivity() {
+class ScrapDetailActivity : AppCompatActivity() {
     var isbn: String = ""
     var fpath: String = ""
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_scrap)
-        backButton.setOnClickListener { v ->
-            startActivity(Intent(this, MainActivity::class.java))
-        }
+        setContentView(R.layout.activity_scrap_detail)
         okButton.setOnClickListener { v -> uploadData(v) }
     }
+
 
     fun uploadData(v: View) {
         if (isbn == "") {
@@ -44,7 +41,7 @@ class ScrapActivity : AppCompatActivity() {
         //data setup
         val doc = textViewDoc.text.toString()
         val title = textViewTitleDoc.text.toString()
-        val userString = user.toString()
+        val userString = user!!.uid
 
         val storageRef = FirebaseStorage.getInstance().reference
             .child("images")
@@ -60,7 +57,7 @@ class ScrapActivity : AppCompatActivity() {
             val task = fileRef.putFile(Uri.fromFile(File(fpath))).await()
             Looper.prepare()
             Toast.makeText(
-                this@ScrapActivity, "upload Image ${task.bytesTransferred / 1000000}M",
+                this@ScrapDetailActivity, "upload Image ${task.bytesTransferred / 1000000}M",
                 Toast.LENGTH_LONG
             ).show()
             Looper.loop()
@@ -72,7 +69,8 @@ class ScrapActivity : AppCompatActivity() {
             "user" to userString, "title" to title, "doc" to doc, "imagePath" to fileRef.path,
             "created_at" to Date(), "upcated_at" to Date()
         )
-        db.collection("scraps").add(data)
+        val docRef = db.collection("users").document(user!!.uid)
+        docRef.collection("scraps").add(data)
             .addOnSuccessListener {
                 Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
                 Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
@@ -82,11 +80,15 @@ class ScrapActivity : AppCompatActivity() {
                 Log.w(TAG, "Error adding document", it)
             }
         //update book
-        db.collection("books").whereEqualTo("isbn", isbn).get().addOnSuccessListener {
+        docRef.collection("books").whereEqualTo("isbn", isbn).get().addOnSuccessListener {
             val n = it.documents.first().get("numScraps", Int::class.java) ?: 0
             it.documents.first().reference.update(mapOf("updated_at" to Date(), "numScraps" to (n + 1)))
             Toast.makeText(this, "update succeed", Toast.LENGTH_LONG).show()
         }
+    }
+
+    fun downLoadFile() {
+
     }
 
     override fun onResume() {
