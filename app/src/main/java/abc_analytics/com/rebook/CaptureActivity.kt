@@ -2,14 +2,18 @@ package abc_analytics.com.rebook
 
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.GoogleBook
+import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Rational
 import android.util.Size
@@ -38,7 +42,7 @@ import kotlinx.android.synthetic.main.content_capture.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import java.io.File
+import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -89,7 +93,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
-    private fun setBookInfo() {
+    private fun setBookInfo(isbnFromBarcode: String) {
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
             Toast.makeText(this, "loginしてください", Toast.LENGTH_LONG).show()
@@ -99,19 +103,23 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         runBlocking {
             //Mainスレッドでネットワーク関連処理を実行するとエラーになるためBackground(Default)で実行
             async(Dispatchers.Default) {
-                HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbn}")
+                HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbnFromBarcode}")
             }.await().let {
                 val googleBooks = adapter.fromJson(it)
                 bookTitle =
-                    googleBooks?.items?.get(0)?.volumeInfo?.title ?: "no book found for $isbn"
+                    googleBooks?.items?.get(0)?.volumeInfo?.title
+                        ?: "no book found for $isbnFromBarcode"
                 thumbnailUrl =
                     googleBooks?.items?.get(0)?.volumeInfo?.imageLinks?.smallThumbnail ?: "no image"
                 authors = googleBooks?.items?.get(0)?.volumeInfo?.authors ?: listOf()
                 textViewTitleCapture.text = "${bookTitle}"
                 checkBoxOkTitle.isChecked = true
+                isbn = isbnFromBarcode
             }
         }
-        uploadToFirebase(user!!.uid)
+        val bundle = Bundle()
+        bundle.putString(FirebaseAnalytics.Param.METHOD, "google book api")
+        firebaseAnalytics.logEvent("external_api_success", bundle)
     }
 
     private fun uploadToFirebase(uid: String) {
@@ -130,10 +138,16 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     .addOnSuccessListener {
                         Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
                         Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
+                        val bundle = Bundle()
+                        bundle.putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
+                        firebaseAnalytics.logEvent("upload_book_success", bundle)
                     }
                     .addOnFailureListener {
                         Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
                         Log.w(TAG, "Error adding document", it)
+                        val bundle = Bundle()
+                        bundle.putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
+                        firebaseAnalytics.logEvent("upload_book_failure", bundle)
                     }
             }
         }
@@ -156,13 +170,20 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             // analyzing *every* image
             setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
         }.build()
-        val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
-            analyzer = BarcodeDetector()
-        }
+        //val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
+        val analyzer = BarcodeDetector(
+            context = this,
+            getIsbn = { isbn },
+            firebaseAnalytics = firebaseAnalytics,
+            checkIfWidgetNoThankyou = { checkBoxOkTitle.isChecked },
+            setBookInfo = { isbn -> setBookInfo(isbn) }
+        )
+        val imageAnalyzer = ImageAnalysis(analyzerConfig)
+        imageAnalyzer.analyzer = analyzer
         // Bind use cases to lifecycle
         // If Android Studio complains about "this" being not a LifecycleOwner
         // try rebuilding the project or updating the appcompat dependency to version 1.1.0 or higher.
-        CameraX.bindToLifecycle(this, preview, imageCapture, analyzerUseCase)
+        CameraX.bindToLifecycle(this, preview, imageCapture, imageAnalyzer)
     }
 
     private fun reqPermissionAndStartCamera(v: TextureView) {
@@ -174,7 +195,9 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults: IntArray
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
     ) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
@@ -227,41 +250,60 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         val imageCapture = ImageCapture(imageCaptureConfig) //same name of this constructing function?
         //val display = DisplayMetrics()
         //imageCapture.setTargetRotation(90)
-        Log.d(TAG, "rotation: ${viewFinder.display.rotation}")
-        imageCapture.setTargetRotation(viewFinder.display.rotation)
-        floatingActionButtonCapture.setOnClickListener {
-            val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
-            imageCapture.takePicture(file,
-                object : ImageCapture.OnImageSavedListener {
-                    override fun onError(error: ImageCapture.UseCaseError, message: String, exc: Throwable?) {
-                        val msg = "Photo capture failed: $message"
-                        Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                        exc?.printStackTrace()
-                    }
 
-                    override fun onImageSaved(file: File) {
-                        val msg = "Photo capture succeeded: ${file.absolutePath}"
-                        lastImagePath = file.absolutePath
-                        Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                        Log.d("CameraXApp", msg)
-                        //use thread?
-//                        val options = BitmapFactory.Options()
-//                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
-                        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-                        analyzeImage(bitmap)
+        val rotation = viewFinder.display.rotation
+        Toast.makeText(this, "rotation: ${rotation}", Toast.LENGTH_LONG).show()
+        imageCapture.setTargetRotation(rotation)
+
+
+        floatingActionButtonCapture.setOnClickListener {
+            imageCapture.takePicture(object : ImageCapture.OnImageCapturedListener() {
+                override fun onCaptureSuccess(image: ImageProxy?, rotationDegrees: Int) {
+                    //https://stackoverflow.com/questions/57432526/convert-camerax-captured-imageproxy-to-bitmapI
+                    //super.onCaptureSuccess(image, rotationDegrees)
+                    Log.d(TAG, "rotationDegrees:${rotationDegrees}")
+                    var bitmap: Bitmap? = null
+                    //take advantage of closable image(imageproxy) object property
+                    image.use { image ->
+                        bitmap = image?.let { imageProxyToBitmap(it) } ?: return
+                        val buffer = image.planes[0].buffer
+                        val bytes = ByteArray(buffer.remaining())
+                        buffer.get(bytes)
+                        val exif = ExifInterface(bytes.inputStream())
+                        val filename = System.currentTimeMillis().toString() + ".jpg"
+                        val values = ContentValues()
+                        values.put(MediaStore.Images.Media.TITLE, filename)
+                        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                     }
+                    analyzeImage(bitmap)
+                }
+
+                override fun onError(
+                    useCaseError: ImageCapture.UseCaseError?,
+                    message: String?,
+                    cause: Throwable?
+                ) {
+                    //super.onError(useCaseError, message, cause)
+                    Log.d(TAG, "error onCaptureListener")
+                }
                 })
         }
         return imageCapture
     }
 
+    fun imageProxyToBitmap(image: ImageProxy): Bitmap {
+        val buffer: ByteBuffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
     //fun recognizeText(result: FirebaseVisionText?, image: Bitmap?) {
-    fun recognizeText(result: FirebaseVisionDocumentText?, image: Bitmap?) {
-        if (result == null || image == null) {
-            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
-            return
+    fun recognizeText(result: FirebaseVisionDocumentText?) {
+        if (result == null) {
+            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show(); return
         }
-        Log.d("aaa result text", result.text.toString())
         val sendIntent = Intent(this@CaptureActivity, ScrapDetailActivity::class.java)
         sendIntent.putExtra(DOC_CONTENT, result.text)
         sendIntent.putExtra(IMG_URI, lastImagePath)
@@ -290,8 +332,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         textRecognizer.processImage(firebaseVisionImage)
             .addOnSuccessListener {
                 Toast.makeText(this@CaptureActivity, "came to success", Toast.LENGTH_SHORT).show()
-                val mutableImage = image.copy(Bitmap.Config.ARGB_8888, true)
-                recognizeText(it, mutableImage)
+                recognizeText(it)
             }
             .addOnFailureListener { Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show() }
     }
@@ -320,54 +361,60 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         viewFinder.setTransform(matrix)
         //viewFinder.layoutParams.width = viewFinder.parent.layout
     }
+}
 
-    inner class BarcodeDetector : ImageAnalysis.Analyzer {
-        private var lastAnalyzedTimestamp = 0L
-        private var lastBarcodeValue = ""
-        private fun degreesToFirebaseRotation(degrees: Int): Int = when (degrees) {
-            0 -> FirebaseVisionImageMetadata.ROTATION_0
-            90 -> FirebaseVisionImageMetadata.ROTATION_90
-            180 -> FirebaseVisionImageMetadata.ROTATION_180
-            270 -> FirebaseVisionImageMetadata.ROTATION_270
-            else -> throw Exception("Rotation must be 0, 90, 180, or 270.")
-        }
+class BarcodeDetector(
+    val context: Context, val getIsbn: () -> String, val firebaseAnalytics: FirebaseAnalytics,
+    val checkIfWidgetNoThankyou: () -> Boolean, val setBookInfo: (String) -> Unit
+) : ImageAnalysis.Analyzer {
+    private var lastAnalyzedTimestamp = 0L
+    private fun degreesToFirebaseRotation(degrees: Int): Int = when (degrees) {
+        0 -> FirebaseVisionImageMetadata.ROTATION_0
+        90 -> FirebaseVisionImageMetadata.ROTATION_90
+        180 -> FirebaseVisionImageMetadata.ROTATION_180
+        270 -> FirebaseVisionImageMetadata.ROTATION_270
+        else -> throw Exception("Rotation must be 0, 90, 180, or 270.")
+    }
 
-        override fun analyze(imageProxy: ImageProxy?, degrees: Int) {
-            if (checkBoxOkTitle.isChecked) return
-            val currentTimestamp = System.currentTimeMillis()
-            // Calculate the average luma no more often than every second
-            if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
-                val mediaImage = imageProxy?.image
-                val imageRotation = degreesToFirebaseRotation(degrees)
-                if (mediaImage != null) {
-                    val image = FirebaseVisionImage.fromMediaImage(mediaImage, imageRotation)
-                    val detector = FirebaseVision.getInstance().visionBarcodeDetector
-                    val result = detector.detectInImage(image)
-                        .addOnSuccessListener { barcodes ->
-                            for (barcode in barcodes) {
-                                val valueType = barcode.valueType
-                                if (barcode.displayValue?.startsWith("97") == true) {
-                                    Toast.makeText(
-                                        this@CaptureActivity,
-                                        "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    if (isbn != barcode.displayValue!!) {
-                                        isbn = barcode.displayValue!!
-                                        setBookInfo()
-                                    }
-                                    val bundle = Bundle()
-                                    bundle.putString(FirebaseAnalytics.Param.METHOD, "camera")
-                                    firebaseAnalytics.logEvent("barcode_captured", bundle)
+    override fun analyze(imageProxy: ImageProxy?, degrees: Int) {
+        //if (checkBoxOkTitle.isChecked) return
+        if (checkIfWidgetNoThankyou()) return
+        val currentTimestamp = System.currentTimeMillis()
+        // Calculate the average luma no more often than every second
+        if (currentTimestamp - lastAnalyzedTimestamp >= TimeUnit.SECONDS.toMillis(1)) {
+            val mediaImage = imageProxy?.image
+            val imageRotation = degreesToFirebaseRotation(degrees)
+            if (mediaImage != null) {
+                val image = FirebaseVisionImage.fromMediaImage(mediaImage, imageRotation)
+                val detector = FirebaseVision.getInstance().visionBarcodeDetector
+                val result = detector.detectInImage(image)
+                    .addOnSuccessListener { barcodes ->
+                        for (barcode in barcodes) {
+                            val valueType = barcode.valueType
+                            if (barcode.displayValue?.startsWith("97") == true) {
+                                Toast.makeText(
+                                    context,
+                                    "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                if (getIsbn() != barcode.displayValue!!) {
+                                    setBookInfo(barcode.displayValue!!)
                                 }
+                                val bundle = Bundle()
+                                bundle.putString(FirebaseAnalytics.Param.METHOD, "camera")
+                                firebaseAnalytics.logEvent("barcode_captured", bundle)
                             }
                         }
-                        .addOnFailureListener {
-                            Toast.makeText(this@CaptureActivity, "scan failed", Toast.LENGTH_LONG).show()
-                        }
-                }
-                lastAnalyzedTimestamp = currentTimestamp
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(
+                            context,
+                            "scan failed",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
             }
+            lastAnalyzedTimestamp = currentTimestamp
         }
     }
 }
