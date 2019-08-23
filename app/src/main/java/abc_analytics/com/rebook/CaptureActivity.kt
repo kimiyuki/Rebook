@@ -237,6 +237,30 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         return preview
     }
 
+    private fun updateTransform() {
+        fun getViewfinderRotation(): Int {
+            return when (viewFinder.display.rotation) {
+                Surface.ROTATION_0 -> 0
+                Surface.ROTATION_90 -> 90
+                Surface.ROTATION_180 -> 180
+                Surface.ROTATION_270 -> 270
+                else -> 0
+            }
+        }
+
+        val matrix = Matrix()
+        // Compute the center of the view finder
+        val centerX = viewFinder.width / 2f
+        val centerY = viewFinder.height / 2f
+        // Correct preview output to account for display rotation
+        val rotationDegrees = getViewfinderRotation()
+        Log.v(TAG, "rotation Degree ${rotationDegrees}")
+        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
+        // Finally, apply transformations to our TextureView
+        viewFinder.setTransform(matrix)
+        //viewFinder.layoutParams.width = viewFinder.parent.layout
+    }
+
 
     private fun imageCapture(): ImageCapture {
         val imageCaptureConfig = Builder()
@@ -263,7 +287,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     //super.onCaptureSuccess(image, rotationDegrees)
                     Log.d(TAG, "rotationDegrees:${rotationDegrees}")
                     var bitmap: Bitmap? = null
-                    //take advantage of closable image(imageproxy) object property
+                    //Imageproxy is closable
                     image.use { image ->
                         bitmap = image?.let { imageProxyToBitmap(it) } ?: return
                         val buffer = image.planes[0].buffer
@@ -284,7 +308,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     message: String?,
                     cause: Throwable?
                 ) {
-                    //super.onError(useCaseError, message, cause)
                     Log.d(TAG, "error onCaptureListener")
                 }
                 })
@@ -299,28 +322,9 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
 
-    //fun recognizeText(result: FirebaseVisionText?, image: Bitmap?) {
-    fun recognizeText(result: FirebaseVisionDocumentText?) {
-        if (result == null) {
-            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show(); return
-        }
-        val sendIntent = Intent(this@CaptureActivity, ScrapDetailActivity::class.java)
-        sendIntent.putExtra(DOC_CONTENT, result.text)
-        sendIntent.putExtra(IMG_URI, lastImagePath)
-        sendIntent.putExtra(ISBN_CONTENT, isbn)
-        sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
-        sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
-
-        //sendIntent.putExtra("IMG", image )
-        startActivityForResult(sendIntent, CAPTURE_DETAIL_INTENT)
-        //textViewAnswer.text = result.text.toString()
-        Toast.makeText(this@CaptureActivity, "came to ${result.text} ", Toast.LENGTH_SHORT).show()
-    }
-
     fun analyzeImage(image: Bitmap?) {
         if (image == null) {
-            Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show()
-            return
+            Toast.makeText(this, "no image", Toast.LENGTH_SHORT).show(); return
         }
 
         FirebaseApp.initializeApp(this)
@@ -331,35 +335,26 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             .getCloudDocumentTextRecognizer(options)
         textRecognizer.processImage(firebaseVisionImage)
             .addOnSuccessListener {
-                Toast.makeText(this@CaptureActivity, "came to success", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CaptureActivity, "ImageVision OCR Done", Toast.LENGTH_SHORT)
+                    .show()
                 recognizeText(it)
             }
             .addOnFailureListener { Toast.makeText(this, "There was some error", Toast.LENGTH_SHORT).show() }
     }
 
-    private fun getViewfinderRotation(): Int {
-        return when (viewFinder.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> 0
+    fun recognizeText(result: FirebaseVisionDocumentText?) {
+        if (result == null) {
+            Toast.makeText(this, "FirebaseVisionDocumentText is null", Toast.LENGTH_SHORT)
+                .show(); return
         }
-    }
-
-    private fun updateTransform() {
-        val matrix = Matrix()
-        // Compute the center of the view finder
-        val centerX = viewFinder.width / 2f
-        val centerY = viewFinder.height / 2f
-        // Correct preview output to account for display rotation
-        val rotationDegrees = getViewfinderRotation()
-        Log.v(TAG, "rotation Degree ${rotationDegrees}")
-        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
-
-        // Finally, apply transformations to our TextureView
-        viewFinder.setTransform(matrix)
-        //viewFinder.layoutParams.width = viewFinder.parent.layout
+        val sendIntent = Intent(this@CaptureActivity, ScrapDetailActivity::class.java)
+        sendIntent.putExtra(DOC_CONTENT, result.text)
+        sendIntent.putExtra(IMG_URI, lastImagePath)
+        sendIntent.putExtra(ISBN_CONTENT, isbn)
+        sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+        sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
+        //sendIntent.putExtra("IMG", image )
+        startActivityForResult(sendIntent, CAPTURE_DETAIL_INTENT)
     }
 }
 
