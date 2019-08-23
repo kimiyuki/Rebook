@@ -14,13 +14,16 @@
             app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent"
             tools:listitem="@layout/row_scrap">
     </androidx.recyclerview.widget.RecyclerView>
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabScrapList"
             android:layout_width="wrap_content"
             android:layout_height="56dp"
-            android:clickable="true" app:srcCompat="@drawable/cameraview_focus_marker_fill"
-            android:id="@+id/fabScrapList"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" app:layout_constraintHorizontal_bias="1.0"
-            android:layout_marginEnd="8dp" android:layout_marginBottom="8dp"/>
+            app:srcCompat="@drawable/cameraview_focus_marker_fill" />
 </androidx.constraintlayout.widget.ConstraintLayout>

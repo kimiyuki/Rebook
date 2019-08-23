@@ -72,6 +72,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         if (tmpBook != null) {
             textViewTitleCapture.text = tmpBook.title
             checkBoxOkTitle.isChecked = true
+            isbn = tmpBook.isbn
         }
 
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)

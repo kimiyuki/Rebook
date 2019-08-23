@@ -28,7 +28,6 @@ class ScrapListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scrap_list)
 
-
         book = intent.getParcelableExtra<Book>(EXTRA_BOOK)
         fabScrapList.setOnClickListener { view ->
             val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
@@ -38,7 +37,6 @@ class ScrapListActivity : AppCompatActivity() {
 
         GlobalScope.launch(Dispatchers.Main) {
             val scrapArray = dataScrapFromFB(book.isbn)
-            //book = dataBookFromFB(book.isbn)
             updateUI(scrapArray)
         }
     }
@@ -47,7 +45,6 @@ class ScrapListActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putParcelable("BOOK", book.copy())
     }
-
 
     fun updateUI(scrapArray: List<Scrap?>) {
         mScrapAdapter = ScrapListAdapter(
