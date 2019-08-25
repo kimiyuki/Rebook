@@ -2,10 +2,6 @@ package abc_analytics.com.rebook
 
 import android.Manifest
 
-const val UsersPATH = "users"       // Firebaseにユーザの表示名を保存するパス
-const val ContentsPATH = "contents" // Firebaseに質問を保存するバス
-const val AnswersPATH = "answers"   // Firebaseに解答を保存するパス
-const val FavoritesPATH = "favorites"// Firebaseにお気に入りを保存するパス
 const val DOC_CONTENT = "abc_analytics.com.rebook.doc_content"
 const val TITLE_CONTENT = "abc_analytics.com.rebook.title_content"
 const val ISBN_CONTENT = "abc_analytics.com.rebook.isbn_content"

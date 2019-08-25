@@ -1,6 +1,7 @@
 package abc_analytics.com.rebook
 
 import abc_analytics.com.rebook.Model.Book
+import abc_analytics.com.rebook.Model.Scrap
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -17,11 +18,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
     private lateinit var mBookAdapter: BookListAdapter
@@ -38,6 +36,7 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show()
         }
+        //externalMediaDirs.map{Log.d(TAG, "externalMediaDirs: ${it.absolutePath}")}
     }
 
     override fun onResume() {
@@ -54,11 +53,22 @@ class MainActivity : AppCompatActivity() {
     private suspend fun dataBookFromFB(): List<Book?> {
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) return listOf<Book>()
-        val snapshots = withContext(Dispatchers.Default) {
-            val ref = db.collection("users").document(user.uid)
-            ref.collection("books").get().await().documents.map { it.toObject(Book::class.java) }
+        val ref = db.collection("users").document(user.uid)
+        val tasks = withContext(Dispatchers.IO) {
+            val retBooks = async { ref.collection("books").get() }
+            val retScrapx = async { ref.collection("scraps").get() }
+            listOf(retBooks, retScrapx).awaitAll()
         }
-        return snapshots
+        val books = tasks.get(0).await().documents.map { it.toObject(Book::class.java) }
+        var scraps = tasks.get(1).await().documents.map { it.toObject(Scrap::class.java) }
+        val mapScraps = scraps.groupingBy { it?.isbn }.eachCount()
+        val _books = books.map {
+            if (mapScraps.containsKey(it?.isbn)) {
+                it?.numScraps = mapScraps[it?.isbn] ?: 0
+            }
+            it
+        }.sortedBy { it?.updated_at }.reversed()
+        return _books
     }
 
     private fun updateUI(bookArray: Array<Book?>) {

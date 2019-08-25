@@ -22,9 +22,10 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
+
 class ScrapDetailActivity : AppCompatActivity() {
     var isbn: String = ""
-    var fpath: String = ""
+    var localImageFilePath: String = ""
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
     var pageNumber: Int = 0
     val storageRef = FirebaseStorage.getInstance().reference
@@ -49,14 +50,14 @@ class ScrapDetailActivity : AppCompatActivity() {
             .child("images")
             .child(userString)
             .child(isbn)
-        val fileRef = storageRef.child("${System.currentTimeMillis()}.png")
+        val fileRef = storageRef.child("${System.currentTimeMillis()}.jpg")
         val db = FirebaseFirestore.getInstance()
         val byteArrayOutputStream = ByteArrayOutputStream()
 
         //upload image file
         GlobalScope.launch(Dispatchers.Default) {
             //val task = fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
-            val task = fileRef.putFile(Uri.fromFile(File(fpath))).await()
+            val task = fileRef.putFile(Uri.fromFile(File(localImageFilePath))).await()
             Looper.prepare()
             Toast.makeText(
                 this@ScrapDetailActivity, "upload Image ${task.bytesTransferred / 1000000}M",
@@ -68,7 +69,8 @@ class ScrapDetailActivity : AppCompatActivity() {
         //upload scrap
         val data = hashMapOf(
             "isbn" to isbn,
-            "user" to userString, "title" to title, "doc" to doc, "imagePath" to fileRef.path,
+            "user" to userString, "title" to title, "doc" to doc,
+            "imagePath" to fileRef.path, "localStoragePath" to localImageFilePath,
             "created_at" to Date(), "upcated_at" to Date()
         )
         val docRef = db.collection("users").document(user!!.uid)
@@ -92,13 +94,13 @@ class ScrapDetailActivity : AppCompatActivity() {
     fun downLoadFile(fpath: String) {
         //val prop = ImageView.ROTATION
         val islandRef = storageRef.child(fpath)
-        if (islandRef.name != null) {
-            val localFile = File.createTempFile("images", "jpg")
-            islandRef.getFile(localFile).addOnSuccessListener {
-                imageViewScrapCaptured.setImageURI(localFile.toUri())
-            }.addOnFailureListener {
-                // Handle any errors
-            }
+        val localFile = File.createTempFile("images", "jpg")
+        islandRef.getFile(localFile).addOnSuccessListener {
+            //            val ei = ExifInterface(localFile.absolutePath)
+//            val orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            imageViewScrapCaptured.setImageURI(localFile.toUri())
+        }.addOnFailureListener {
+            Toast.makeText(this, "Error: ${it.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -106,22 +108,22 @@ class ScrapDetailActivity : AppCompatActivity() {
         super.onResume()
         val intent = intent
         val text = intent.getStringExtra(DOC_CONTENT)
-        fpath = intent.getStringExtra(IMG_URI)
+        localImageFilePath = intent.getStringExtra(IMG_URI)
         title = intent.getStringExtra(TITLE_CONTENT)
         isbn = intent.getStringExtra(ISBN_CONTENT)
         pageNumber = intent.getIntExtra(PAGENUMBER_CONTENT, 0)
         val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
-        Log.d(TAG, "fpath:${fpath}")
+        Log.d(TAG, "localImageFilePath:${localImageFilePath}")
         textViewTitleDoc.text = title
         textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
         textViewPageNumber.text = "page:${pageNumber}"
         Log.d(TAG, "fromActivity:${fromActivity}")
         if (fromActivity == "ScrapListActivity") {
             okButton.isVisible = false
-            downLoadFile(fpath)
+            downLoadFile(localImageFilePath)
         } else if (fromActivity == "CaptureActivity") {
             okButton.isVisible = true
-            imageViewScrapCaptured.setImageURI(fpath.toUri())
+            imageViewScrapCaptured.setImageURI(localImageFilePath.toUri())
         }
         if (text != null) textViewDoc.text = text
     }
