@@ -29,6 +29,9 @@ class ScrapDetailActivity : AppCompatActivity() {
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
     var pageNumber: Int = 0
     val storageRef = FirebaseStorage.getInstance().reference
+    val db = FirebaseFirestore.getInstance()
+    var scrapFirebaseId: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scrap_detail)
@@ -51,7 +54,6 @@ class ScrapDetailActivity : AppCompatActivity() {
             .child(userString)
             .child(isbn)
         val fileRef = storageRef.child("${System.currentTimeMillis()}.jpg")
-        val db = FirebaseFirestore.getInstance()
         val byteArrayOutputStream = ByteArrayOutputStream()
 
         //upload image file
@@ -71,7 +73,7 @@ class ScrapDetailActivity : AppCompatActivity() {
             "isbn" to isbn,
             "user" to userString, "title" to title, "doc" to doc,
             "imagePath" to fileRef.path, "localStoragePath" to localImageFilePath,
-            "created_at" to Date(), "upcated_at" to Date()
+            "created_at" to Date(), "updated_at" to Date()
         )
         val docRef = db.collection("users").document(user!!.uid)
         docRef.collection("scraps").add(data)
@@ -104,6 +106,31 @@ class ScrapDetailActivity : AppCompatActivity() {
         }
     }
 
+    fun updatePageNumberInFirebase() {
+        val docRef = db.collection("users").document(user!!.uid)
+        val _txt = editTextPageNumber.text.toString()
+        val n: Int = if (_txt == "") {
+            0
+        } else {
+            _txt.toInt()
+        }
+        if (scrapFirebaseId == null) return
+        docRef.collection("scraps").document(scrapFirebaseId!!).get().addOnSuccessListener {
+            Log.d(TAG, "success:${scrapFirebaseId}")
+            it.reference.update(mapOf("updated_at" to Date(), "paageNumber" to n))
+                .addOnSuccessListener {
+                    Log.d(TAG, "success2:${scrapFirebaseId}")
+                    Toast.makeText(this, "update succeed: page ${n}", Toast.LENGTH_LONG).show()
+                }.addOnFailureListener {
+                Log.d(TAG, "fail2:${scrapFirebaseId}")
+                Toast.makeText(this, "update failed: page ${n}", Toast.LENGTH_LONG).show()
+            }
+        }.addOnFailureListener {
+            Log.d(TAG, "fail:${scrapFirebaseId}")
+            Toast.makeText(this, "update failed: get this Scrap", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         val intent = intent
@@ -111,12 +138,16 @@ class ScrapDetailActivity : AppCompatActivity() {
         localImageFilePath = intent.getStringExtra(IMG_URI)
         title = intent.getStringExtra(TITLE_CONTENT)
         isbn = intent.getStringExtra(ISBN_CONTENT)
+        scrapFirebaseId = intent.getStringExtra(SCRAP_ID)
         pageNumber = intent.getIntExtra(PAGENUMBER_CONTENT, 0)
         val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
         Log.d(TAG, "localImageFilePath:${localImageFilePath}")
         textViewTitleDoc.text = title
         textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
-        textViewPageNumber.text = "page:${pageNumber}"
+        //editTextPageNumber.setText(pageNumber)
+        editTextPageNumber.setOnFocusChangeListener { v, hasFocus ->
+            updatePageNumberInFirebase()
+        }
         Log.d(TAG, "fromActivity:${fromActivity}")
         if (fromActivity == "ScrapListActivity") {
             okButton.isVisible = false

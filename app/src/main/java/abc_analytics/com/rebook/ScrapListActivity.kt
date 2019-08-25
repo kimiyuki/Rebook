@@ -57,6 +57,7 @@ class ScrapListActivity : AppCompatActivity() {
                 sendIntent.putExtra(ISBN_CONTENT, book.isbn)
                 sendIntent.putExtra(TITLE_CONTENT, book.title)
                 sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+                sendIntent.putExtra(SCRAP_ID, scrap?.id)
                 startActivityForResult(sendIntent, SCRAPLIST_DETAIL_INTENT)
             })
         recyclerViewScrap.adapter = mScrapAdapter
@@ -67,10 +68,13 @@ class ScrapListActivity : AppCompatActivity() {
         val scraps = withContext(Dispatchers.Default) {
             val ref = db.collection("users")
                 .document(user!!.uid).collection("scraps").whereEqualTo("isbn", isbn)
-            ref.get().await().documents.map { it.toObject(Scrap::class.java) }.filter { it?.isbn == isbn }
+            ref.get().await().documents.map {
+                val o = it.toObject(Scrap::class.java)
+                o?.id = it.id; o
+            }.filter { it?.isbn == isbn }
         }
-        Log.d(TAG, "isbn ${isbn}")
         Log.d(TAG, "size ${scraps.size}")
+        Log.d(TAG, "scraps ${scraps}")
         return scraps
     }
 

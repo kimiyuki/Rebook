@@ -6,15 +6,15 @@
         android:layout_height="match_parent"
         tools:context=".ScrapDetailActivity">
 
-    <TextView
-            android:id="@+id/textViewPageNumber"
+    <EditText
+            android:id="@+id/editTextPageNumber"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp"
-            android:text="TextView"
+            android:inputType="number"
             app:layout_constraintBottom_toTopOf="@id/scrollView2"
             app:layout_constraintEnd_toStartOf="@+id/textViewTitleDoc"
             app:layout_constraintStart_toStartOf="parent"
@@ -29,8 +29,8 @@
             android:layout_marginBottom="2dp"
             android:text="TextView"
             app:layout_constraintBottom_toTopOf="@+id/scrollView2"
-            app:layout_constraintStart_toEndOf="@id/textViewPageNumber"
-            app:layout_constraintTop_toTopOf="@id/textViewPageNumber" />
+            app:layout_constraintStart_toEndOf="@id/editTextPageNumber"
+            app:layout_constraintTop_toTopOf="@id/editTextPageNumber" />
 
     <ScrollView
             android:id="@+id/scrollView2"

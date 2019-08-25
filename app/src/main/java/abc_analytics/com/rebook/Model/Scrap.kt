@@ -8,6 +8,7 @@ data class Scrap(
     val update_at: Date = Date(),
     val imagePath: String = "",
     val page: Int = 0,
-    val isbn: String = ""
+    val isbn: String = "",
+    var id: String = ""
 )
 

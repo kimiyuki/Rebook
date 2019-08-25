@@ -9,6 +9,8 @@ const val IMG_URI = "abc_analytics.com.rebook.img_uri"
 const val EXTRA_BOOK = "abc_analytics.com.rebook.extra_book"
 const val PAGENUMBER_CONTENT = "abc_analytics.com.rebook.extra_pageNumber"
 const val FROM_ACTIVITY = "abc_analytics.com.rebook.from_activity"
+const val SCRAP_ID = "abc_analytics.com.rebook.scrap_id"
+
 const val CAPTURE_DETAIL_INTENT = 100
 const val SCRAPLIST_DETAIL_INTENT = 101
 const val PERMISSIONS_REQUEST_CODE = 111
