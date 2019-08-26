@@ -1,34 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:app="http://schemas.android.com/apk/res-auto"
-              android:orientation="horizontal"
-              android:weightSum="10"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:orientation="horizontal"
               android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/row_scrap">
 
     <ImageView
+            android:layout_weight="1"
             android:id="@+id/imageViewScrapImage"
-            android:layout_width="120dp"
-            android:layout_height="160dp"
-            android:layout_weight="2"
-            android:maxHeight="100dp"
-            app:srcCompat="@drawable/ic_launcher_background" />
-
-    <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="8"
-            android:weightSum="10"
+            app:srcCompat="@drawable/ic_launcher_background"
+            tools:srcCompat="@tools:sample/backgrounds/scenic[0]" />
+
+    <LinearLayout
+            android:layout_weight="2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:orientation="vertical">
 
 
         <LinearLayout
+                android:layout_weight="8"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:weightSum="10">
+                android:orientation="horizontal">
 
             <TextView
                     android:id="@+id/textViewLabel"
@@ -48,10 +46,10 @@
                     app:autoSizeMaxTextSize="4dp" />
 
             <TextView
+                    android:layout_weight="2"
                     android:id="@+id/textViewUpdateTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="6"
                     android:text="TextView" />
         </LinearLayout>
 
@@ -60,7 +58,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginTop="5dp"
-                android:layout_weight="9"
+                android:layout_weight="3"
                 android:text="0" />
     </LinearLayout>
 

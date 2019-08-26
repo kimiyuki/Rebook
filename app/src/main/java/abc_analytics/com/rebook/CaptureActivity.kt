@@ -87,6 +87,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        floatingActionButtonCapture.isClickable = true
+    }
+
     private fun setBookInfo(isbnFromBarcode: String) {
         val user = FirebaseAuth.getInstance().currentUser
         if (user == null) {
@@ -319,6 +324,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         }
         floatingActionButtonCapture.setOnClickListener {
             val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
+            it.isClickable = false
             Log.d(TAG, "file first(): ${file.absolutePath}")
             imageCapture.takePicture(file,
                 object : ImageCapture.OnImageSavedListener {
@@ -338,7 +344,6 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                         cause: Throwable?
                     ) {
                         Log.d(TAG, "failed to capture image in CaptureActivity")
-                        cause
                     }
                 })
         }

@@ -40,7 +40,7 @@ exports.generateThumbnail = functions
       await bucket.file(filePath).download({destination: tempFilePath});
       console.log('Image downloaded locally to', tempFilePath);
       // Generate a thumbnail using ImageMagick.
-      await spawn('convert', [tempFilePath, '-thumbnail', '200x200>', tempFilePath]);
+      await spawn('convert', [tempFilePath, '-auto-orient', '-thumbnail', '200x200>', tempFilePath]);
       console.log('Thumbnail created at', tempFilePath);
       // We add a 'thumb_' prefix to thumbnails file name. That's where we'll upload the thumbnail.
       const thumbFileName = `thumb_${fileName}`;
