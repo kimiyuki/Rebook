@@ -20,16 +20,21 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
+import kotlin.coroutines.CoroutineContext
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var mBookAdapter: BookListAdapter
     private val mAuth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        checkPerm()
         Log.d("hello ", "aaa")
         fab.setOnClickListener { view ->
             startActivity(Intent(this, CaptureActivity::class.java))
@@ -42,22 +47,25 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         //val bookArray = dataBook()
-        GlobalScope.launch(Dispatchers.Main) {
-            val bookArray = dataBookFromFB()
-            Log.d(TAG, bookArray.toString())
-            checkPerm()
-            updateUI(bookArray.toTypedArray())
+        try {
+            launch {
+                val bookArray = dataBookFromFB()
+                updateUI(bookArray.toTypedArray())
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
         }
     }
 
+    //Main scope
     private suspend fun dataBookFromFB(): List<Book?> {
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user == null) return listOf<Book>()
+        val user = FirebaseAuth.getInstance().currentUser ?: return listOf<Book>()
         val ref = db.collection("users").document(user.uid)
         val tasks = withContext(Dispatchers.IO) {
-            val retBooks = async { ref.collection("books").get() }
-            val retScrapx = async { ref.collection("scraps").get() }
-            listOf(retBooks, retScrapx).awaitAll()
+            listOf(
+                ref.collection("books").get(),
+                ref.collection("scraps").get()
+            )
         }
         val books = tasks.get(0).await().documents.map { it.toObject(Book::class.java) }
         var scraps = tasks.get(1).await().documents.map { it.toObject(Scrap::class.java) }
@@ -124,6 +132,4 @@ class MainActivity : AppCompatActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
-
-
 }

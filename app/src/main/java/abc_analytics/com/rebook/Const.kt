@@ -10,6 +10,7 @@ const val EXTRA_BOOK = "abc_analytics.com.rebook.extra_book"
 const val PAGENUMBER_CONTENT = "abc_analytics.com.rebook.extra_pageNumber"
 const val FROM_ACTIVITY = "abc_analytics.com.rebook.from_activity"
 const val SCRAP_ID = "abc_analytics.com.rebook.scrap_id"
+const val SCRAP_PAGENUMBER = "abc_analytics.com.rebook.scrap_pageNumber"
 
 const val CAPTURE_DETAIL_INTENT = 100
 const val SCRAPLIST_DETAIL_INTENT = 101

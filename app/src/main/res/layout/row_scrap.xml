@@ -14,17 +14,54 @@
             android:layout_weight="2"
             android:maxHeight="100dp"
             app:srcCompat="@drawable/ic_launcher_background" />
-    <TextView
-            android:text="TextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/textViewScrapPage"
-            android:layout_weight="1" app:autoSizeMaxTextSize="4dp" android:textAlignment="textStart"/>
-    <TextView
-            android:text="@string/common_google_play_services_update_title"
-            android:layout_width="wrap_content"
+
+    <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/textViewScrapDoc"
-            android:layout_weight="7"
-            android:layout_marginTop="5dp"/>
+            android:layout_weight="8"
+            android:weightSum="10"
+            android:orientation="vertical">
+
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:weightSum="10">
+
+            <TextView
+                    android:id="@+id/textViewLabel"
+                    android:layout_width="8dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="page:" />
+
+            <TextView
+                    android:id="@+id/textViewScrapPage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="2"
+                    android:text="TextView"
+                    android:textAlignment="textStart"
+                    app:autoSizeMaxTextSize="4dp" />
+
+            <TextView
+                    android:id="@+id/textViewUpdateTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="6"
+                    android:text="TextView" />
+        </LinearLayout>
+
+        <TextView
+                android:id="@+id/textViewScrapDoc"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="5dp"
+                android:layout_weight="9"
+                android:text="0" />
+    </LinearLayout>
+
 </LinearLayout>

@@ -2,7 +2,6 @@ package abc_analytics.com.rebook
 
 import android.net.Uri
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -14,16 +13,15 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.android.synthetic.main.activity_scrap_detail.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 
-class ScrapDetailActivity : AppCompatActivity() {
+class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
     var isbn: String = ""
     var localImageFilePath: String = ""
     var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
@@ -32,12 +30,15 @@ class ScrapDetailActivity : AppCompatActivity() {
     val db = FirebaseFirestore.getInstance()
     var scrapFirebaseId: String? = null
 
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scrap_detail)
         okButton.setOnClickListener { v -> uploadData(v) }
     }
-
 
     fun uploadData(v: View) {
         if (isbn == "") {
@@ -57,17 +58,15 @@ class ScrapDetailActivity : AppCompatActivity() {
         val byteArrayOutputStream = ByteArrayOutputStream()
 
         //upload image file
-        GlobalScope.launch(Dispatchers.Default) {
-            //val task = fileRef.putBytes(byteArrayOutputStream.toByteArray()).await()
-            val task = fileRef.putFile(Uri.fromFile(File(localImageFilePath))).await()
-            Looper.prepare()
+        launch {
+            val task =
+                withContext(Dispatchers.IO) { fileRef.putFile(Uri.fromFile(File(localImageFilePath))) }
             Toast.makeText(
-                this@ScrapDetailActivity, "upload Image ${task.bytesTransferred / 1000000}M",
+                this@ScrapDetailActivity,
+                "upload Image ${task.await().bytesTransferred / 1000000}M",
                 Toast.LENGTH_LONG
             ).show()
-            Looper.loop()
         }
-
         //upload scrap
         val data = hashMapOf(
             "isbn" to isbn,
@@ -117,13 +116,14 @@ class ScrapDetailActivity : AppCompatActivity() {
         if (scrapFirebaseId == null) return
         docRef.collection("scraps").document(scrapFirebaseId!!).get().addOnSuccessListener {
             Log.d(TAG, "success:${scrapFirebaseId}")
-            it.reference.update(mapOf("updated_at" to Date(), "paageNumber" to n))
+            it.reference.update(mapOf("updated_at" to Date(), "pageNumber" to n))
                 .addOnSuccessListener {
                     Log.d(TAG, "success2:${scrapFirebaseId}")
-                    Toast.makeText(this, "update succeed: page ${n}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "update succeed: pageNumber ${n}", Toast.LENGTH_LONG)
+                        .show()
                 }.addOnFailureListener {
                 Log.d(TAG, "fail2:${scrapFirebaseId}")
-                Toast.makeText(this, "update failed: page ${n}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "update failed: pageNumber ${n}", Toast.LENGTH_LONG).show()
             }
         }.addOnFailureListener {
             Log.d(TAG, "fail:${scrapFirebaseId}")
@@ -139,14 +139,14 @@ class ScrapDetailActivity : AppCompatActivity() {
         title = intent.getStringExtra(TITLE_CONTENT)
         isbn = intent.getStringExtra(ISBN_CONTENT)
         scrapFirebaseId = intent.getStringExtra(SCRAP_ID)
-        pageNumber = intent.getIntExtra(PAGENUMBER_CONTENT, 0)
+        pageNumber = intent.getIntExtra(SCRAP_PAGENUMBER, 0)
         val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
-        Log.d(TAG, "localImageFilePath:${localImageFilePath}")
         textViewTitleDoc.text = title
         textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
-        //editTextPageNumber.setText(pageNumber)
+        Log.d(TAG, "pageNumber:${pageNumber}")
+        editTextPageNumber.setText(pageNumber.toString())
         editTextPageNumber.setOnFocusChangeListener { v, hasFocus ->
-            updatePageNumberInFirebase()
+            if (!hasFocus) updatePageNumberInFirebase()
         }
         Log.d(TAG, "fromActivity:${fromActivity}")
         if (fromActivity == "ScrapListActivity") {

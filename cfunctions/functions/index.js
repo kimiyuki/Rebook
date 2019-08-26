@@ -35,9 +35,7 @@ exports.generateThumbnail = functions
 
       const bucket = admin.storage().bucket(fileBucket);
       const tempFilePath = path.join(os.tmpdir(), fileName);
-      const metadata = {
-          contentType: contentType
-      };
+      const metadata = { contentType: contentType };
 
       await bucket.file(filePath).download({destination: tempFilePath});
       console.log('Image downloaded locally to', tempFilePath);

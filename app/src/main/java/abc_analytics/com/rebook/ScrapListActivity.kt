@@ -12,17 +12,19 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_scrap_list.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
-class ScrapListActivity : AppCompatActivity() {
+class ScrapListActivity : AppCompatActivity(), CoroutineScope {
     lateinit var mScrapAdapter: ScrapListAdapter
     private val db = FirebaseFirestore.getInstance()
     private lateinit var book: Book
     private var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +37,7 @@ class ScrapListActivity : AppCompatActivity() {
             startActivityForResult(sendIntent, SCRAPLIST_CAPTURE_REQUEST_CODE)
         }
 
-        GlobalScope.launch(Dispatchers.Main) {
+        launch {
             val scrapArray = dataScrapFromFB(book.isbn)
             updateUI(scrapArray)
         }
@@ -58,6 +60,7 @@ class ScrapListActivity : AppCompatActivity() {
                 sendIntent.putExtra(TITLE_CONTENT, book.title)
                 sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
                 sendIntent.putExtra(SCRAP_ID, scrap?.id)
+                sendIntent.putExtra(SCRAP_PAGENUMBER, scrap?.pageNumber)
                 startActivityForResult(sendIntent, SCRAPLIST_DETAIL_INTENT)
             })
         recyclerViewScrap.adapter = mScrapAdapter
@@ -79,7 +82,7 @@ class ScrapListActivity : AppCompatActivity() {
     }
 
     private suspend fun dataBookFromFB(isbn: String): Book {
-        return withContext(Dispatchers.Default) {
+        return withContext(Dispatchers.IO) {
             val s = db.collection("users").document(user!!.uid)
                 .collection("books").whereEqualTo("isbn", isbn).get().await()
             if (s.size() > 0) {

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.storage.FirebaseStorage
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.row_scrap.view.*
+import java.text.SimpleDateFormat
 
 class ScrapListAdapter(
     context: Context, var scraps: List<Scrap?>, val uid: String, val isbn: String,
@@ -20,8 +21,11 @@ class ScrapListAdapter(
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
 
     init {
-        scraps = scraps.sortedBy { it?.page }
-        Picasso.Builder(context).loggingEnabled(true)
+        scraps = scraps.sortedBy { it?.pageNumber }
+        Picasso.Builder(context).run {
+            loggingEnabled(true)
+            indicatorsEnabled(true)
+        }
     }
 
     class ScrapListViewHolder(itemView: View, uid: String, isbn: String) :
@@ -29,6 +33,7 @@ class ScrapListAdapter(
         val doc: TextView = itemView.textViewScrapDoc
         val n: TextView = itemView.textViewScrapPage
         val storage = FirebaseStorage.getInstance().reference
+        val update_time = itemView.textViewUpdateTime
 
         fun updateWithUrl(path: String?) {
             if (path == null && path == "") return
@@ -54,8 +59,9 @@ class ScrapListAdapter(
         if (scraps[position] == null) return
         holder.apply {
             updateWithUrl(scraps[position]?.imagePath)
-            n.text = scraps[position]?.page.toString()
+            n.text = scraps[position]?.pageNumber.toString()
             doc.text = scraps[position]?.doc
+            update_time.text = SimpleDateFormat("MM/dd HH:mm").format(scraps[position]?.updated_at)
         }
     }
 }

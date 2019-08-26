@@ -7,8 +7,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.row_book.view.*
 
 class BookListAdapter(
@@ -23,19 +24,18 @@ class BookListAdapter(
     class BookViewHolder(itemView: View, context: Context) : RecyclerView.ViewHolder(itemView) {
         val bookTitle: TextView = itemView.textViewBookTitle
         val numScraps: TextView = itemView.textViewNumScraps
+
+        init {
+            Picasso.Builder(context).run {
+                loggingEnabled(true)
+                indicatorsEnabled(true)
+            }
+        }
         fun updateWithUrl(url: String?, context: Context) {
             Log.d(TAG, "000 ${url}")
-//            val a = Picasso.Builder(context).run {
-//                loggingEnabled(true)
-//                indicatorsEnabled(true)
-//            }
-            //Picasso.get().load()
-            //if (url == null || url.isEmpty()) return
-            //TODO() 機種によって、thumnailが描画されない. 原因追求の方法がわからない
-            Glide.with(context)
-                .load(url)
+            if (url == null || url.isEmpty()) return
+            Picasso.get().load(url.replace("http:", "https:").toUri())
                 .into(itemView.imageViewThumbNail)
-            //Picasso.get().load(url?.toUri()).into(itemView.imageViewThumbNail)
         }
     }
 
