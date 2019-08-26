@@ -31,6 +31,7 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
         setContentView(R.layout.activity_scrap_list)
 
         book = intent.getParcelableExtra<Book>(EXTRA_BOOK)
+        title = book.title
         fabScrapList.setOnClickListener { view ->
             val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
             sendIntent.putExtra(EXTRA_BOOK, book)
