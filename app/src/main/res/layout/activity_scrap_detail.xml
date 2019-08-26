@@ -50,7 +50,7 @@
                 android:layout_height="643dp"
                 tools:layout_editor_absoluteY="1dp">
 
-            <ImageView
+            <com.github.chrisbanes.photoview.PhotoView
                     android:id="@+id/imageViewScrapCaptured"
                     android:adjustViewBounds="true"
                     android:layout_width="wrap_content"
