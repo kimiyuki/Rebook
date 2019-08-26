@@ -39,7 +39,10 @@ class ScrapListAdapter(
             if (path == null && path == "") return
             val newPath = path?.replace("""([^/]+\.png)""".toRegex(), "thumb_$1")
             storage.child(newPath!!).downloadUrl.addOnSuccessListener {
-                Picasso.get().load(it).into(itemView.imageViewScrapImage)
+                Picasso.get().load(it)
+                    .fit().centerInside()
+                    .rotate(90f)
+                    .into(itemView.imageViewScrapImage)
                 Log.d(TAG, "download for picasso $it")
             }
         }
@@ -47,7 +50,7 @@ class ScrapListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScrapListViewHolder {
         val view = mLayoutInflater.inflate(R.layout.row_scrap, parent, false)
-        view.layoutParams.height = parent.measuredHeight / 4
+        view.layoutParams.height = parent.measuredHeight / 2
         val holder = ScrapListViewHolder(view, uid, isbn)
         view.setOnClickListener { scraps[holder.adapterPosition].also { onItemClicked(it) } }
         return holder
