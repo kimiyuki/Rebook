@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.storage.FirebaseStorage
 import com.squareup.picasso.Picasso
@@ -14,8 +15,9 @@ import kotlinx.android.synthetic.main.row_scrap.view.*
 import java.text.SimpleDateFormat
 
 class ScrapListAdapter(
-    context: Context, var scraps: List<Scrap?>, val uid: String, val isbn: String,
-    val onItemClicked: (Scrap?) -> Unit
+    val context: Context, var scraps: List<Scrap?>, val uid: String, val isbn: String,
+    val onItemClicked: (Scrap) -> Unit,
+    val deleteScrap: (Scrap) -> Unit
 ) : RecyclerView.Adapter<ScrapListAdapter.ScrapListViewHolder>() {
 
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
@@ -52,7 +54,23 @@ class ScrapListAdapter(
         val view = mLayoutInflater.inflate(R.layout.row_scrap, parent, false)
         view.layoutParams.height = parent.measuredHeight / 2
         val holder = ScrapListViewHolder(view, uid, isbn)
-        view.setOnClickListener { scraps[holder.adapterPosition].also { onItemClicked(it) } }
+        //holder.adaption is not yet real index but an UI event goes on it's ok. maybe.
+        //https://developer.android.com/reference/android/support/v7/widget/RecyclerView.ViewHolder#getadapterposition
+        view.setOnClickListener { onItemClicked(scraps[holder.adapterPosition]!!) }
+        view.setOnLongClickListener { v ->
+            val builder = AlertDialog.Builder(context)
+            builder.setTitle("削除")
+            builder.setMessage("削除しますか")
+            builder.setPositiveButton("OK") { _, _ ->
+                deleteScrap(scraps[holder.adapterPosition]!!)
+                notifyDataSetChanged()
+            }
+            builder.setNegativeButton("CANCEL", null)
+            val dialog = builder.create()
+            dialog.show()
+            Log.d("hello", "dry run: delete the scrap")
+            true
+        }
         return holder
     }
 

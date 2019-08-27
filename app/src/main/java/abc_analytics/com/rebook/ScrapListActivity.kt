@@ -55,17 +55,32 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
             onItemClicked = { scrap ->
                 //Toast.makeText(this, scrap?.doc, Toast.LENGTH_LONG).show()
                 val sendIntent = Intent(this@ScrapListActivity, ScrapDetailActivity::class.java)
-                sendIntent.putExtra(DOC_CONTENT, scrap?.doc)
-                sendIntent.putExtra(IMG_URI, scrap?.imagePath)
+                sendIntent.putExtra(DOC_CONTENT, scrap.doc)
+                sendIntent.putExtra(IMG_URI, scrap.imagePath)
                 sendIntent.putExtra(ISBN_CONTENT, book.isbn)
                 sendIntent.putExtra(TITLE_CONTENT, book.title)
                 sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
-                sendIntent.putExtra(SCRAP_ID, scrap?.id)
-                sendIntent.putExtra(SCRAP_PAGENUMBER, scrap?.pageNumber)
+                sendIntent.putExtra(SCRAP_ID, scrap.id)
+                sendIntent.putExtra(SCRAP_PAGENUMBER, scrap.pageNumber)
                 startActivityForResult(sendIntent, SCRAPLIST_DETAIL_INTENT)
-            })
+            },
+            deleteScrap = { scrap ->
+                launch {
+                    deleteScrap(scrap)
+                    recyclerViewScrap.adapter?.notifyDataSetChanged()
+                }
+            }
+        )
         recyclerViewScrap.adapter = mScrapAdapter
         recyclerViewScrap.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+    }
+
+    private suspend fun deleteScrap(scrap: Scrap) {
+        withContext(Dispatchers.IO) {
+            db.collection("users").document(user!!.uid)
+                .collection("scraps").document(scrap.id).delete().await()
+            Log.d(TAG, "scrap ${scrap.id} deleted")
+        }
     }
 
     private suspend fun dataScrapFromFB(isbn: String): List<Scrap?> {
