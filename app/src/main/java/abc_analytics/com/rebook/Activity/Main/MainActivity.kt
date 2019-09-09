@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
@@ -32,6 +33,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
   private lateinit var mBookAdapter: BookListAdapter
   private val mAuth = FirebaseAuth.getInstance()
   private lateinit var myViewModel: MyViewModel
+  private val user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
   private val db = FirebaseFirestore.getInstance()
   private val job = SupervisorJob()
   override val coroutineContext: CoroutineContext
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     setSupportActionBar(toolbar)
+    val user = FirebaseAuth.getInstance().currentUser
     myViewModel = ViewModelProviders.of(this@MainActivity).get(MyViewModel::class.java)
     checkPerm()
     Log.d("hello ", "aaa")
@@ -54,9 +57,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
   override fun onResume() {
     super.onResume()
+    user ?: return
     try {
       launch {
-        val bookArray = myViewModel.getBooks()
+        val bookArray = myViewModel.getBooks(user)
         updateUI(bookArray.value!!.toTypedArray())
       }
     } catch (e: Throwable) {
@@ -80,8 +84,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
           startActivity(sendIntent)
         },
         onItemLongClicked = { book ->
-          if (book != null) {
-            launch { myViewModel.deleteBook(book) }
+          if (book != null && user != null) {
+            launch { myViewModel.deleteBook(user, book) }
           }
           Log.d("hello adapter long click", book?.title ?: "no book")
           Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
