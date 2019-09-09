@@ -10,5 +10,7 @@ data class Book(
     val thumbnailUrl: String = "", val created_at: Date = Date(),
     val authors: List<String> = listOf(),
     val updated_at: Date = Date(),
-    var numScraps: Int = 0
+    var numScraps: Int = 0,
+    var lastImagePath: String = ""
+
 ) : Parcelable

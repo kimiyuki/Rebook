@@ -1,6 +1,6 @@
 package abc_analytics.com.rebook.Model
 
-data class GoogleBook(
+data class GoogleBookRes(
     val items: List<Item>?,
     val kind: String?,
     val totalItems: Int?
