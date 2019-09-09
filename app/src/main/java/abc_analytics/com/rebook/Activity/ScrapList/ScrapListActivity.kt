@@ -1,10 +1,14 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.ScrapList
 
+import abc_analytics.com.rebook.*
+import abc_analytics.com.rebook.Activity.Capture.CaptureActivity
+import abc_analytics.com.rebook.Activity.ScrapDetail.ScrapDetailActivity
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,7 +39,10 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
         fabScrapList.setOnClickListener { view ->
             val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
             sendIntent.putExtra(EXTRA_BOOK, book)
-            startActivityForResult(sendIntent, SCRAPLIST_CAPTURE_REQUEST_CODE)
+            startActivityForResult(
+                sendIntent,
+                SCRAPLIST_CAPTURE_REQUEST_CODE
+            )
         }
 
         launch {
@@ -49,12 +56,15 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
         outState.putParcelable("BOOK", book.copy())
     }
 
-    fun updateUI(scrapArray: List<Scrap?>) {
+    fun updateUI(scrapArray: MutableList<Scrap?>) {
         mScrapAdapter = ScrapListAdapter(
             this@ScrapListActivity, scrapArray, user!!.uid, book.isbn,
             onItemClicked = { scrap ->
                 //Toast.makeText(this, scrap?.doc, Toast.LENGTH_LONG).show()
-                val sendIntent = Intent(this@ScrapListActivity, ScrapDetailActivity::class.java)
+                val sendIntent = Intent(
+                    this@ScrapListActivity,
+                    ScrapDetailActivity::class.java
+                )
                 sendIntent.putExtra(DOC_CONTENT, scrap.doc)
                 sendIntent.putExtra(IMG_URI, scrap.imagePath)
                 sendIntent.putExtra(ISBN_CONTENT, book.isbn)
@@ -64,10 +74,15 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
                 sendIntent.putExtra(SCRAP_PAGENUMBER, scrap.pageNumber)
                 startActivityForResult(sendIntent, SCRAPLIST_DETAIL_INTENT)
             },
-            deleteScrap = { scrap ->
+            deleteScrap = { scrap, index ->
                 launch {
-                    deleteScrap(scrap)
-                    recyclerViewScrap.adapter?.notifyDataSetChanged()
+                    if (async { deleteScrap(scrap) }.await()) {
+                        mScrapAdapter.scraps.removeAt(index)
+                        mScrapAdapter.notifyItemRemoved(index)
+                        mScrapAdapter.notifyItemRangeChanged(index, scrapArray.size)
+                        Toast.makeText(this@ScrapListActivity, "delete scrap", Toast.LENGTH_LONG)
+                            .show()
+                    }
                 }
             }
         )
@@ -75,25 +90,26 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
         recyclerViewScrap.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
     }
 
-    private suspend fun deleteScrap(scrap: Scrap) {
-        withContext(Dispatchers.IO) {
-            db.collection("users").document(user!!.uid)
-                .collection("scraps").document(scrap.id).delete().await()
-            Log.d(TAG, "scrap ${scrap.id} deleted")
+    private suspend fun deleteScrap(scrap: Scrap): Boolean {
+        return withContext(Dispatchers.IO) {
+            val ret = db.collection("users").document(user!!.uid)
+                .collection("scraps").document(scrap.id).delete()
+            //ret.await()
+            ret.isSuccessful
         }
     }
 
-    private suspend fun dataScrapFromFB(isbn: String): List<Scrap?> {
+    private suspend fun dataScrapFromFB(isbn: String): MutableList<Scrap?> {
         val scraps = withContext(Dispatchers.Default) {
             val ref = db.collection("users")
                 .document(user!!.uid).collection("scraps").whereEqualTo("isbn", isbn)
             ref.get().await().documents.map {
                 val o = it.toObject(Scrap::class.java)
                 o?.id = it.id; o
-            }.filter { it?.isbn == isbn }
+            }.filter { it?.isbn == isbn } as MutableList
         }
-        Log.d(TAG, "size ${scraps.size}")
-        Log.d(TAG, "scraps ${scraps}")
+        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "size ${scraps.size}")
+        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "scraps ${scraps}")
         return scraps
     }
 

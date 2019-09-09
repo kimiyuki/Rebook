@@ -1,5 +1,9 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.Main
 
+import abc_analytics.com.rebook.*
+import abc_analytics.com.rebook.Activity.Capture.CaptureActivity
+import abc_analytics.com.rebook.Activity.Login.LoginActivity
+import abc_analytics.com.rebook.Activity.ScrapList.ScrapListActivity
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
 import android.Manifest
@@ -52,8 +56,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 val bookArray = dataBookFromFB()
                 updateUI(bookArray.toTypedArray())
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            e.cause
         }
     }
 
@@ -70,30 +75,33 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         val books = tasks.get(0).await().documents.map { it.toObject(Book::class.java) }
         var scraps = tasks.get(1).await().documents.map { it.toObject(Scrap::class.java) }
         val mapScraps = scraps.groupingBy { it?.isbn }.eachCount()
-        val _books = books.map {
+        return books.map {
             if (mapScraps.containsKey(it?.isbn)) {
                 it?.numScraps = mapScraps[it?.isbn] ?: 0
+            } else {
+                it?.numScraps = 0
             }
             it
         }.sortedBy { it?.updated_at }.reversed()
-        return _books
     }
 
     private fun updateUI(bookArray: Array<Book?>) {
         title = mAuth.currentUser?.displayName ?: "no yet login"
-        mBookAdapter = BookListAdapter(this@MainActivity, bookArray.toMutableList(),
-            onItemClicked = { book ->
-                //Log.d("hello adapter click", book?.title ?: "no book")
-                //Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
-                val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
-                sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
-                sendIntent.putExtra(EXTRA_BOOK, book)
-                startActivity(sendIntent)
-            },
-            onItemLongClicked = { book ->
-                Log.d("hello adapter long click", book?.title ?: "no book")
-                Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
-            })
+        mBookAdapter =
+            BookListAdapter(this@MainActivity,
+                bookArray.toMutableList(),
+                onItemClicked = { book ->
+                    //Log.d("hello adapter click", book?.title ?: "no book")
+                    //Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
+                    val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
+                    sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+                    sendIntent.putExtra(EXTRA_BOOK, book)
+                    startActivity(sendIntent)
+                },
+                onItemLongClicked = { book ->
+                    Log.d("hello adapter long click", book?.title ?: "no book")
+                    Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
+                })
         recyclerViewBook.adapter = mBookAdapter
         recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
     }
@@ -102,7 +110,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             getContentsInfo(this)
         } else {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), PERMISSIONS_REQUEST_CODE)
+            requestPermissions(
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                PERMISSIONS_REQUEST_CODE
+            )
         }
     }
 

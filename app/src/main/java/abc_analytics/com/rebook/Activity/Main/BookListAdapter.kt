@@ -1,6 +1,8 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.Main
 
+import abc_analytics.com.rebook.Activity.Login.TAG
 import abc_analytics.com.rebook.Model.Book
+import abc_analytics.com.rebook.R
 import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
@@ -20,7 +22,6 @@ class BookListAdapter(
 
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
 
-
     class BookViewHolder(itemView: View, context: Context) : RecyclerView.ViewHolder(itemView) {
         val bookTitle: TextView = itemView.textViewBookTitle
         val numScraps: TextView = itemView.textViewNumScraps
@@ -31,10 +32,12 @@ class BookListAdapter(
                 indicatorsEnabled(true)
             }
         }
+
         fun updateWithUrl(url: String?, context: Context) {
             Log.d(TAG, "000 ${url}")
             if (url == null || url.isEmpty()) return
-            Picasso.get().load(url.replace("http:", "https:").toUri())
+            Picasso.get()
+                .load(url.replace("http:", "https:").toUri())
                 .into(itemView.imageViewThumbNail)
         }
     }
@@ -42,7 +45,8 @@ class BookListAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookViewHolder {
         val view = mLayoutInflater.inflate(R.layout.row_book, parent, false)
         view.layoutParams.height = parent.measuredHeight / 10
-        val holder = BookViewHolder(view, context)
+        val holder =
+            BookViewHolder(view, context)
         view.setOnClickListener { books[holder.adapterPosition].also { onItemClicked(it) } }
         view.setOnLongClickListener { v ->
             books[holder.adapterPosition].also { onItemLongClicked(it) }

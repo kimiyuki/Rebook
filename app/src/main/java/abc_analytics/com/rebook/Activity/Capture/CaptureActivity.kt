@@ -1,7 +1,11 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.Capture
 
+import abc_analytics.com.rebook.*
+import abc_analytics.com.rebook.Activity.Login.LoginActivity
+import abc_analytics.com.rebook.Activity.ScrapDetail.ScrapDetailActivity
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.GoogleBook
+import abc_analytics.com.rebook.R
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -62,7 +66,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
     //var fifo: Queue<String> = CircularFifoQueue<String>(2)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d(TAG, "captureActivity onCreate started")
+        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "captureActivity onCreate started")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
 
@@ -105,7 +109,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                 HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbnFromBarcode}")
                     .let {
                         val googleBooks = adapter.fromJson(it ?: "{}")
-                        Log.d(TAG, googleBooks.toString())
+                        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, googleBooks.toString())
                         bookTitle = googleBooks?.items?.get(0)?.volumeInfo?.title ?: ""
                         if (bookTitle == "") {
                             Toast.makeText(
@@ -150,7 +154,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             if (documents.size() < 1) {
                 doc.collection("books").add(data)
                     .addOnSuccessListener {
-                        Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
+                        Log.d(
+                            abc_analytics.com.rebook.Activity.Login.TAG,
+                            "DocumentSnapshot added with ID: ${it.id}"
+                        )
                         Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
                         val bundle = Bundle()
                         bundle.putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
@@ -158,7 +165,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                     }
                     .addOnFailureListener {
                         Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
-                        Log.w(TAG, "Error adding document", it)
+                        Log.w(
+                            abc_analytics.com.rebook.Activity.Login.TAG,
+                            "Error adding document",
+                            it
+                        )
                         val bundle = Bundle()
                         bundle.putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
                         firebaseAnalytics.logEvent("upload_book_failure", bundle)
@@ -204,7 +215,11 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         if (allPermissionsGranted()) {
             v.post { startCamera() }
         } else {
-            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+            ActivityCompat.requestPermissions(
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
+            )
         }
     }
 
@@ -268,7 +283,7 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
         val centerY = viewFinder.height / 2f
         // Correct preview output to account for display rotation
         val rotationDegrees = getViewfinderRotation()
-        Log.v(TAG, "rotation Degree ${rotationDegrees}")
+        Log.v(abc_analytics.com.rebook.Activity.Login.TAG, "rotation Degree ${rotationDegrees}")
         matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
         // Finally, apply transformations to our TextureView
         viewFinder.setTransform(matrix)
@@ -297,7 +312,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             override fun onCaptureSuccess(image: ImageProxy?, rotationDegrees: Int) {
                 //https://stackoverflow.com/questions/57432526/convert-camerax-captured-imageproxy-to-bitmapI
                 //super.onCaptureSuccess(image, rotationDegrees)
-                Log.d(TAG, "rotationDegrees:${rotationDegrees}")
+                Log.d(
+                    abc_analytics.com.rebook.Activity.Login.TAG,
+                    "rotationDegrees:${rotationDegrees}"
+                )
                 var bitmap: Bitmap? = null
                 //Imageproxy is closable
                 image.use { image ->
@@ -320,13 +338,13 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
             override fun onError(
                 useCaseError: ImageCapture.UseCaseError?, message: String?, cause: Throwable?
             ) {
-                Log.d(TAG, "error onCaptureListener")
+                Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "error onCaptureListener")
             }
         }
         floatingActionButtonCapture.setOnClickListener {
             val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
             it.isClickable = false
-            Log.d(TAG, "file first(): ${file.absolutePath}")
+            Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "file first(): ${file.absolutePath}")
             imageCapture.takePicture(file,
                 object : ImageCapture.OnImageSavedListener {
                     override fun onImageSaved(file: File) {
@@ -344,7 +362,10 @@ class CaptureActivity : AppCompatActivity(), LifecycleOwner {
                         message: String,
                         cause: Throwable?
                     ) {
-                        Log.d(TAG, "failed to capture image in CaptureActivity")
+                        Log.d(
+                            abc_analytics.com.rebook.Activity.Login.TAG,
+                            "failed to capture image in CaptureActivity"
+                        )
                     }
                 })
         }

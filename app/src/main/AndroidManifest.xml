@@ -21,10 +21,10 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/AppTheme">
-        <activity android:name=".ScrapListActivity">
+        <activity android:name=".Activity.ScrapList.ScrapListActivity">
         </activity>
         <activity
-                android:name=".MainActivity"
+                android:name=".Activity.Main.MainActivity"
                 android:label="@string/title_activity_main"
                 android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
@@ -33,11 +33,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name=".LoginActivity">
+        <activity android:name=".Activity.Login.LoginActivity">
         </activity>
-        <activity android:name=".ScrapDetailActivity">
+        <activity android:name=".Activity.ScrapDetail.ScrapDetailActivity">
         </activity>
-        <activity android:name=".CaptureActivity">
+        <activity android:name=".Activity.Capture.CaptureActivity">
         </activity>
 
         <meta-data

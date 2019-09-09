@@ -1,5 +1,7 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.Login
 
+import abc_analytics.com.rebook.Activity.Main.MainActivity
+import abc_analytics.com.rebook.R
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -107,12 +109,14 @@ class LoginActivity : AppCompatActivity() {
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     // Sign in success, update UI with the signed-in user's information
-                    val bundle = Bundle()
-                    bundle.putString(FirebaseAnalytics.Param.METHOD, "firebaseLogin")
-                    firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, bundle)
+                    Bundle().let {
+                        it.putString(FirebaseAnalytics.Param.METHOD, "firebaseLogin")
+                        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.LOGIN, it)
+                    }
                     Log.d(TAG, "signInWithCredential:success")
-                    val user = mAuth.currentUser
-                    Toast.makeText(this, user?.email, Toast.LENGTH_LONG).show()
+                    mAuth.currentUser?.let {
+                        Toast.makeText(this, it.email, Toast.LENGTH_LONG).show()
+                    }
                     startActivity(Intent(this, MainActivity::class.java))
                 } else {
                     // If sign in fails, display a message to the user.

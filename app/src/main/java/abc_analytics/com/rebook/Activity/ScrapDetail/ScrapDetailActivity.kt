@@ -1,5 +1,6 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.ScrapDetail
 
+import abc_analytics.com.rebook.*
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -77,12 +78,15 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
         val docRef = db.collection("users").document(user!!.uid)
         docRef.collection("scraps").add(data)
             .addOnSuccessListener {
-                Log.d(TAG, "DocumentSnapshot added with ID: ${it.id}")
+                Log.d(
+                    abc_analytics.com.rebook.Activity.Login.TAG,
+                    "DocumentSnapshot added with ID: ${it.id}"
+                )
                 Toast.makeText(this, "upload succeed", Toast.LENGTH_LONG).show()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "upload failed", Toast.LENGTH_LONG).show()
-                Log.w(TAG, "Error adding document", it)
+                Log.w(abc_analytics.com.rebook.Activity.Login.TAG, "Error adding document", it)
             }
         //update book
         docRef.collection("books").whereEqualTo("isbn", isbn).get().addOnSuccessListener {
@@ -115,18 +119,21 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
         }
         if (scrapFirebaseId == null) return
         docRef.collection("scraps").document(scrapFirebaseId!!).get().addOnSuccessListener {
-            Log.d(TAG, "success:${scrapFirebaseId}")
+            Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "success:${scrapFirebaseId}")
             it.reference.update(mapOf("updated_at" to Date(), "pageNumber" to n))
                 .addOnSuccessListener {
-                    Log.d(TAG, "success2:${scrapFirebaseId}")
+                    Log.d(
+                        abc_analytics.com.rebook.Activity.Login.TAG,
+                        "success2:${scrapFirebaseId}"
+                    )
                     Toast.makeText(this, "update succeed: pageNumber ${n}", Toast.LENGTH_LONG)
                         .show()
                 }.addOnFailureListener {
-                Log.d(TAG, "fail2:${scrapFirebaseId}")
+                    Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "fail2:${scrapFirebaseId}")
                     Toast.makeText(this, "update failed: pageNumber ${n}", Toast.LENGTH_LONG).show()
             }
         }.addOnFailureListener {
-            Log.d(TAG, "fail:${scrapFirebaseId}")
+            Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "fail:${scrapFirebaseId}")
             Toast.makeText(this, "update failed: get this Scrap", Toast.LENGTH_LONG).show()
         }
     }
@@ -143,12 +150,12 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
         val fromActivity = intent.getStringExtra(FROM_ACTIVITY)
         textViewTitleDoc.text = title
         textViewDoc.text = text.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
-        Log.d(TAG, "pageNumber:${pageNumber}")
+        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "pageNumber:${pageNumber}")
         editTextPageNumber.setText(pageNumber.toString())
         editTextPageNumber.setOnFocusChangeListener { v, hasFocus ->
             if (!hasFocus) updatePageNumberInFirebase()
         }
-        Log.d(TAG, "fromActivity:${fromActivity}")
+        Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "fromActivity:${fromActivity}")
         if (fromActivity == "ScrapListActivity") {
             okButton.isVisible = false
             downLoadFile(localImageFilePath)

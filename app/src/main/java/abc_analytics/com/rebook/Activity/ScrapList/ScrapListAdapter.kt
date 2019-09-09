@@ -1,6 +1,8 @@
-package abc_analytics.com.rebook
+package abc_analytics.com.rebook.Activity.ScrapList
 
+import abc_analytics.com.rebook.Activity.Login.TAG
 import abc_analytics.com.rebook.Model.Scrap
+import abc_analytics.com.rebook.R
 import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,15 +17,15 @@ import kotlinx.android.synthetic.main.row_scrap.view.*
 import java.text.SimpleDateFormat
 
 class ScrapListAdapter(
-    val context: Context, var scraps: List<Scrap?>, val uid: String, val isbn: String,
+    val context: Context, var scraps: MutableList<Scrap?>, val uid: String, val isbn: String,
     val onItemClicked: (Scrap) -> Unit,
-    val deleteScrap: (Scrap) -> Unit
+    val deleteScrap: (Scrap, Int) -> Unit
 ) : RecyclerView.Adapter<ScrapListAdapter.ScrapListViewHolder>() {
 
     private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
 
     init {
-        scraps = scraps.sortedBy { it?.pageNumber }
+        scraps.sortBy { it?.pageNumber }
         Picasso.Builder(context).run {
             loggingEnabled(true)
             indicatorsEnabled(true)
@@ -53,7 +55,12 @@ class ScrapListAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScrapListViewHolder {
         val view = mLayoutInflater.inflate(R.layout.row_scrap, parent, false)
         view.layoutParams.height = parent.measuredHeight / 2
-        val holder = ScrapListViewHolder(view, uid, isbn)
+        val holder =
+            ScrapListViewHolder(
+                view,
+                uid,
+                isbn
+            )
         //holder.adaption is not yet real index but an UI event goes on it's ok. maybe.
         //https://developer.android.com/reference/android/support/v7/widget/RecyclerView.ViewHolder#getadapterposition
         view.setOnClickListener { onItemClicked(scraps[holder.adapterPosition]!!) }
@@ -62,8 +69,7 @@ class ScrapListAdapter(
             builder.setTitle("削除")
             builder.setMessage("削除しますか")
             builder.setPositiveButton("OK") { _, _ ->
-                deleteScrap(scraps[holder.adapterPosition]!!)
-                notifyDataSetChanged()
+                deleteScrap(scraps[holder.adapterPosition]!!, holder.adapterPosition)
             }
             builder.setNegativeButton("CANCEL", null)
             val dialog = builder.create()
