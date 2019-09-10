@@ -1,6 +1,7 @@
 package abc_analytics.com.rebook.Activity.Main
 
 import abc_analytics.com.rebook.Model.Book
+import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.Repository.FireStoreRep
 import androidx.annotation.UiThread
 import androidx.lifecycle.LiveData
@@ -15,6 +16,7 @@ import kotlin.coroutines.CoroutineContext
 
 class MyViewModel : ViewModel(), CoroutineScope {
   var books = MutableLiveData<MutableList<Book>>()
+  var scraps = MutableLiveData<MutableList<Scrap>>()
   // var books =_books as LiveData<MutableList<Book>>
   private val job = SupervisorJob()
   override val coroutineContext: CoroutineContext
@@ -37,6 +39,15 @@ class MyViewModel : ViewModel(), CoroutineScope {
     return books.also {
       launch {
         it.value = FireStoreRep.getBooks(user) as MutableList<Book>
+      }
+    }
+  }
+
+  @UiThread
+  fun getScraps(user: FirebaseUser, isbn: String): LiveData<MutableList<Scrap>> {
+    return scraps.also {
+      launch {
+        it.value = FireStoreRep.getScraps(user, isbn) as MutableList<Scrap>
       }
     }
   }

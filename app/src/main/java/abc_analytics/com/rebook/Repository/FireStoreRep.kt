@@ -38,11 +38,10 @@ class FireStoreRep {
     }
 
     suspend fun deleteBook(user: FirebaseUser, book: Book) {
-      var ret = FirebaseFirestore.getInstance()
+      FirebaseFirestore.getInstance()
         .collection("users").document(user.uid)
         .collection("books").whereEqualTo("isbn", book.isbn)
-        .get().await().documents.get(0)?.reference
-      ret?.delete()
+        .get().await().documents.get(0)?.reference?.delete()
     }
 
     suspend fun uploadBook(user: FirebaseUser, book: Book) {
@@ -61,6 +60,35 @@ class FireStoreRep {
       )
       FirebaseFirestore.getInstance().collection("users").document(user.uid)
         .collection("books").add(data).await()
+    }
+
+    suspend fun getScraps(user: FirebaseUser, isbn: String): List<Scrap> {
+      val ref = FirebaseFirestore.getInstance().collection("users")
+        .document(user.uid).collection("scraps").whereEqualTo("isbn", isbn)
+      return ref.get().await().documents.map {
+        val o = it.toObject(Scrap::class.java) ?: return listOf()
+        o.id = it.id; o
+      }.filter { it.isbn == isbn }
+    }
+
+    suspend fun deleteScrap(user: FirebaseUser, scrap: Scrap) {
+      FirebaseFirestore.getInstance().collection("users")
+        .document(user.uid).collection("scraps").document(scrap.id).delete()
+        .await()
+    }
+
+    fun updatePageNumberInScrap(user: FirebaseUser, scrap: Scrap, bookPage: Int) {
+      val docRef = FirebaseFirestore.getInstance().collection("users").document(user.uid)
+      docRef.collection("scraps").document(scrap.id).get().addOnSuccessListener {
+        it.reference.update(mapOf("updated_at" to Date(), "pageNumber" to bookPage))
+          .addOnSuccessListener {
+            //
+          }.addOnFailureListener {
+            //
+          }
+      }.addOnFailureListener {
+        //
+      }
     }
   }
 }
