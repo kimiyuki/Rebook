@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseUser
 
 class MyViewModel : ViewModel() {
-  private var books = MutableLiveData<MutableList<Book>>()
+  var books = MutableLiveData<MutableList<Book>>()
   // var books =_books as LiveData<MutableList<Book>>
 
   @UiThread

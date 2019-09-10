@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +33,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
   private val mAuth = FirebaseAuth.getInstance()
   private lateinit var myViewModel: MyViewModel
   private val user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
-  private val db = FirebaseFirestore.getInstance()
   private val job = SupervisorJob()
   override val coroutineContext: CoroutineContext
     get() = Dispatchers.Main + job
@@ -72,12 +70,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
   private fun updateUI(bookArray: Array<Book?>) {
     title = mAuth.currentUser?.displayName ?: "no yet login"
-    mBookAdapter =
-      BookListAdapter(this@MainActivity,
+    mBookAdapter = BookListAdapter(this@MainActivity,
         bookArray.toMutableList(),
         onItemClicked = { book ->
-          //Log.d("hello adapter click", book?.title ?: "no book")
-          //Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
           val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
           sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
           sendIntent.putExtra(EXTRA_BOOK, book)
@@ -89,7 +84,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
           }
           Log.d("hello adapter long click", book?.title ?: "no book")
           Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
-        })
+        }
+    )
     recyclerViewBook.adapter = mBookAdapter
     recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
   }

@@ -23,13 +23,13 @@ import kotlin.coroutines.CoroutineContext
 
 
 class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
-    var isbn: String = ""
-    var localImageFilePath: String = ""
-    var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
-    var pageNumber: Int = 0
-    val storageRef = FirebaseStorage.getInstance().reference
-    val db = FirebaseFirestore.getInstance()
-    var scrapFirebaseId: String? = null
+    private var isbn: String = ""
+    private var localImageFilePath: String = ""
+    private var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
+    private var pageNumber: Int = 0
+    private val storageRef = FirebaseStorage.getInstance().reference
+    private val db = FirebaseFirestore.getInstance()
+    private var scrapFirebaseId: String? = null
 
     private val job = Job()
     override val coroutineContext: CoroutineContext
