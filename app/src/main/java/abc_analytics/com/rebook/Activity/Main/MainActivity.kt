@@ -9,11 +9,12 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -41,53 +42,56 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     setSupportActionBar(toolbar)
-    val user = FirebaseAuth.getInstance().currentUser
-    myViewModel = ViewModelProviders.of(this@MainActivity).get(MyViewModel::class.java)
     checkPerm()
-    Log.d("hello ", "aaa")
+    val user = FirebaseAuth.getInstance().currentUser ?: return
+    myViewModel = ViewModelProviders.of(this@MainActivity).get(MyViewModel::class.java)
+    myViewModel.getBooks(user).observe(this, Observer {
+      updateUI(it.toTypedArray())
+    })
     fab.setOnClickListener { view ->
       startActivity(Intent(this, CaptureActivity::class.java))
       Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
         .setAction("Action", null).show()
-    }
-    //externalMediaDirs.map{Log.d(TAG, "externalMediaDirs: ${it.absolutePath}")}
-  }
-
-  override fun onResume() {
-    super.onResume()
-    user ?: return
-    try {
-      launch {
-        val bookArray = myViewModel.getBooks(user)
-        updateUI(bookArray.value!!.toTypedArray())
-      }
-    } catch (e: Throwable) {
-      Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
-      //TODO(), send info to crashlycs or GA
-      e.cause //automatically send crashlycs?
     }
   }
 
   private fun updateUI(bookArray: Array<Book?>) {
     title = mAuth.currentUser?.displayName ?: "no yet login"
     mBookAdapter = BookListAdapter(this@MainActivity,
-        bookArray.toMutableList(),
-        onItemClicked = { book ->
-          val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
-          sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
-          sendIntent.putExtra(EXTRA_BOOK, book)
-          startActivity(sendIntent)
-        },
-        onItemLongClicked = { book ->
-          if (book != null && user != null) {
-            launch { myViewModel.deleteBook(user, book) }
-          }
-          Log.d("hello adapter long click", book?.title ?: "no book")
-          Toast.makeText(this, book?.title ?: "no book", Toast.LENGTH_LONG).show()
-        }
+      bookArray.toMutableList(),
+      onItemClicked = moveToScrapList(),
+      onItemLongClicked = deleteBook(user)
     )
     recyclerViewBook.adapter = mBookAdapter
     recyclerViewBook.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+  }
+
+
+  private fun moveToScrapList(): (Book?) -> Unit {
+    return { book ->
+      val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
+      sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+      sendIntent.putExtra(EXTRA_BOOK, book)
+      startActivity(sendIntent)
+    }
+  }
+
+  private fun deleteBook(user: FirebaseUser?): (Book?) -> Unit {
+    return { book ->
+      if (book != null && user != null) {
+        AlertDialog.Builder(this@MainActivity)
+          .setTitle("削除")
+          .setMessage("削除します")
+          .setPositiveButton("OK") { dialog, which ->
+            launch {
+              myViewModel.deleteBook(user, book)
+              Toast.makeText(
+                this@MainActivity, book.title, Toast.LENGTH_LONG
+              ).show()
+            }
+          }.show()
+      }
+    }
   }
 
   private fun checkPerm() {
