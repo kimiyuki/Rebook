@@ -2,17 +2,16 @@ package abc_analytics.com.rebook.Repository
 
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
-import android.util.Log.d
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.util.*
 
 object FireStoreRep {
   val TAG = "FIREBASE_REPOSITORY"
-
   // get saved addresses from firebase
   suspend fun getBooks(user: FirebaseUser): List<Book?> {
     //throw UnsupportedOperationException()
@@ -37,15 +36,16 @@ object FireStoreRep {
     }.sortedBy { it?.updated_at }.reversed()
   }
 
-  suspend fun deleteBook(user: FirebaseUser, book: Book) {
-    FirebaseFirestore.getInstance()
+  suspend fun deleteBook(user: FirebaseUser, book: Book): Boolean? {
+    val t = FirebaseFirestore.getInstance()
       .collection("users").document(user.uid)
       .collection("books").whereEqualTo("isbn", book.isbn)
       .get().await().documents.get(0)?.reference?.delete()
+    return t?.isSuccessful
   }
 
   suspend fun uploadBook(user: FirebaseUser, book: Book) {
-    d("hello22", book.title)
+    Timber.i("#uploadBook: #{book.title}")
     //upload
     var ret = FirebaseFirestore.getInstance()
       .collection("users").document(user.uid)

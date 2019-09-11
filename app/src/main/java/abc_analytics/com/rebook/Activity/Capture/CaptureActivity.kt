@@ -5,6 +5,7 @@ import abc_analytics.com.rebook.Activity.Login.LoginActivity
 import abc_analytics.com.rebook.Activity.Main.MyViewModel
 import abc_analytics.com.rebook.Activity.ScrapDetail.ScrapDetailActivity
 import abc_analytics.com.rebook.Model.Book
+import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.R
 import abc_analytics.com.rebook.Repository.getBookInfoFromGoogleAPI
 import android.content.ContentValues
@@ -344,12 +345,12 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
 
   fun sendToScrapDetail(txt: String) {
     val sendIntent = Intent(this@CaptureActivity, ScrapDetailActivity::class.java)
-    sendIntent.putExtra(DOC_CONTENT, txt)
-    sendIntent.putExtra(IMG_URI, lastImagePath)
-    sendIntent.putExtra(ISBN_CONTENT, book?.isbn)
+    val scrap = Scrap(
+      doc = txt, localImagePath = lastImagePath,
+      isbn = book!!.isbn, bookTitle = book!!.title
+    )
     sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
-    sendIntent.putExtra(TITLE_CONTENT, textViewTitleCapture.text ?: "no title")
-    //sendIntent.putExtra("IMG", image )
+    sendIntent.putExtra(EXTRA_SCRAP, scrap)
     startActivityForResult(sendIntent, CAPTURE_DETAIL_INTENT)
   }
 }

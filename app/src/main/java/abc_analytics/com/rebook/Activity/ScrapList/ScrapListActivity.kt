@@ -12,7 +12,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
@@ -40,22 +40,18 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_scrap_list)
-    viewModel = ViewModelProviders.of(this).get(MyViewModel::class.java)
     book = intent.getParcelableExtra<Book>(EXTRA_BOOK).also { title = it.title }
     fabScrapList.setOnClickListener { view ->
-      val sendIntent = Intent(this@ScrapListActivity, CaptureActivity::class.java)
-      sendIntent.putExtra(EXTRA_BOOK, book)
-      startActivityForResult(sendIntent, SCRAPLIST_CAPTURE_REQUEST_CODE)
+      Intent(this@ScrapListActivity, CaptureActivity::class.java).apply {
+        putExtra(EXTRA_BOOK, book)
+        startActivityForResult(this, SCRAPLIST_CAPTURE_REQUEST_CODE)
+      }
     }
     if (user == null) return
-    viewModel.getScraps(user, book.isbn).observe(this, Observer {
-      launch { updateUI(it) }
-    })
-  }
-
-  override fun onSaveInstanceState(outState: Bundle) {
-    super.onSaveInstanceState(outState)
-    outState.putParcelable("BOOK", book.copy())
+    ViewModelProvider(this).get(MyViewModel::class.java)
+      .getScraps(user, book.isbn).observe(this, Observer {
+        updateUI(it)
+      })
   }
 
   fun updateUI(scrapArray: List<Scrap>): Unit {

@@ -4,10 +4,10 @@ import abc_analytics.com.rebook.EXTRA_SCRAP
 import abc_analytics.com.rebook.FROM_ACTIVITY
 import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.R
+import abc_analytics.com.rebook.Repository.CloudStorageRep.downLoadFile
+import abc_analytics.com.rebook.Repository.CloudStorageRep.uploadFile
 import abc_analytics.com.rebook.Repository.FireStoreRep.updatePageNumberInScrap
-import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -16,10 +16,12 @@ import androidx.core.view.isVisible
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
 import kotlinx.android.synthetic.main.activity_scrap_detail.*
-import kotlinx.coroutines.*
-import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.*
 import kotlin.coroutines.CoroutineContext
 
@@ -27,7 +29,6 @@ import kotlin.coroutines.CoroutineContext
 class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
   private val db = FirebaseFirestore.getInstance()
   private var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
-  private val storageRef = FirebaseStorage.getInstance().reference
   private val scrap: Scrap by lazy { intent.getSerializableExtra(EXTRA_SCRAP) as Scrap }
   private val job = Job()
   override val coroutineContext: CoroutineContext
@@ -37,12 +38,15 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_scrap_detail)
     textViewDoc.text = scrap.doc.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
-    Log.d(abc_analytics.com.rebook.Activity.Login.TAG, "pageNumber:${scrap.pageNumber}")
+    Timber.d("pageNumber:${scrap.pageNumber}")
     editTextPageNumber.setText(scrap.pageNumber.toString())
     when (intent.getStringExtra(FROM_ACTIVITY)) {
       "Activity.ScrapList.ScrapListActivity" -> {
         okButton.isVisible = false
-        downLoadFile(scrap.imagePath)
+        launch {
+          val file = downLoadFile(scrap.imagePath)
+          imageViewScrapCaptured.setImageURI(file.toUri())
+        }
       }
       "Activity.Capture.CaptureActivity" -> {
         okButton.isVisible = true
@@ -53,7 +57,7 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
     okButton.setOnClickListener { _ ->
       insertScrap(user!!, scrap)
       updateNumScrapsInBooks(user!!, scrap.isbn)
-      uploadFile(scrap.imagePath)
+      launch { uploadFile(scrap.imagePath, scrap) }
     }
     editTextPageNumber.setOnFocusChangeListener { v, hasFocus ->
       if (!hasFocus) updatePageNumberInScrap(user!!, scrap, (v as EditText).text.toString().toInt())
@@ -65,24 +69,8 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
       Toast.makeText(this, "no isbn", Toast.LENGTH_LONG).show()
       return
     }
-//    val data = hashMapOf(
-//      "isbn" to scrap.isbn,
-//      "user" to user.uid,
-//      "title" to scrap.bookTitle,
-//      "doc" to scrap.doc,
-//      "imagePath" to scrap.imagePath,
-//      "localStoragePath" to scrap.localImagePath,
-//      "created_at" to Date(),
-//      "updated_at" to Date()
-//    )
     db.collection("users").document(user.uid)
       .collection("scraps").add(scrap.copy(created_at = Date(), updated_at = Date()))
-      .addOnSuccessListener {
-        //
-      }
-      .addOnFailureListener {
-        //
-      }
   }
 
   fun updateNumScrapsInBooks(user: FirebaseUser, isbn: String) {
@@ -95,23 +83,5 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
       }
   }
 
-  fun uploadFile(fpath: String) {
-    val fileRef = storageRef.child("${System.currentTimeMillis()}.jpg")
-    //upload image file
-    launch {
-      val task =
-        withContext(Dispatchers.IO) { fileRef.putFile(Uri.fromFile(File(scrap.localImagePath))) }
-    }
-  }
-
-  fun downLoadFile(fpath: String) {
-    val islandRef = storageRef.child(fpath)
-    val localFile = File.createTempFile("images", "jpg")
-    islandRef.getFile(localFile).addOnSuccessListener {
-      imageViewScrapCaptured.setImageURI(localFile.toUri())
-    }.addOnFailureListener {
-      Toast.makeText(this, "Error: ${it.message}", Toast.LENGTH_LONG).show()
-    }
-  }
 
 }

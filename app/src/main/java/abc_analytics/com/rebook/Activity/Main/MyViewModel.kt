@@ -3,7 +3,6 @@ package abc_analytics.com.rebook.Activity.Main
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.Repository.FireStoreRep
-import androidx.annotation.UiThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
 class MyViewModel : ViewModel(), CoroutineScope {
@@ -39,21 +39,21 @@ class MyViewModel : ViewModel(), CoroutineScope {
     return books
   }
 
-  @UiThread
   fun getScraps(user: FirebaseUser, isbn: String): LiveData<MutableList<Scrap>> {
-    return scraps.also {
-      launch {
-        it.value = FireStoreRep.getScraps(user, isbn) as MutableList<Scrap>
-      }
+    viewModelScope.launch {
+      scraps.value = FireStoreRep.getScraps(user, isbn) as MutableList<Scrap>
     }
+    return scraps
   }
 
-  @UiThread
   fun deleteBook(user: FirebaseUser, book: Book) {
     val list = books.value ?: return
     list.removeIf { it.id == book.id }
-    launch {
-      FireStoreRep.deleteBook(user = user, book = book)
+    viewModelScope.launch {
+      val ret = FireStoreRep.deleteBook(user = user, book = book)
+      if (ret != true) {
+        Timber.i("failed to delete")
+      }
     }
     books.value = list
   }
