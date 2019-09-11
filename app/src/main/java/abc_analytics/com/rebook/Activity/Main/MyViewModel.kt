@@ -23,26 +23,19 @@ class MyViewModel : ViewModel(), CoroutineScope {
   override val coroutineContext: CoroutineContext
     get() = Dispatchers.Main + job
 
-  fun addBook(user: FirebaseUser, book: Book) {
+  suspend fun addBook(user: FirebaseUser, book: Book) {
     val list = books.value ?: return
     list.add(book)
-    viewModelScope.launch {
-      //init{} makes list non-null
-      FireStoreRep.uploadBook(user = user, book = book)
-    }
+    FireStoreRep.uploadBook(user = user, book = book)
   }
 
-  fun getBooks(user: FirebaseUser): LiveData<MutableList<Book>> {
-    viewModelScope.launch {
-      books.value = FireStoreRep.getBooks(user) as MutableList<Book>
-    }
+  suspend fun getBooks(user: FirebaseUser): LiveData<MutableList<Book>> {
+    books.value = FireStoreRep.getBooks(user) as MutableList<Book>
     return books
   }
 
-  fun getScraps(user: FirebaseUser, isbn: String): LiveData<MutableList<Scrap>> {
-    viewModelScope.launch {
-      scraps.value = FireStoreRep.getScraps(user, isbn) as MutableList<Scrap>
-    }
+  suspend fun getScraps(user: FirebaseUser, isbn: String): LiveData<MutableList<Scrap>> {
+    scraps.value = FireStoreRep.getScraps(user, isbn) as MutableList<Scrap>
     return scraps
   }
 

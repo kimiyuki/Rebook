@@ -2,6 +2,7 @@ package abc_analytics.com.rebook.Repository
 
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
+import abc_analytics.com.rebook.coroExHandler
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -37,39 +38,39 @@ object FireStoreRep {
   }
 
   suspend fun deleteBook(user: FirebaseUser, book: Book): Boolean? {
-    val t = FirebaseFirestore.getInstance()
-      .collection("users").document(user.uid)
-      .collection("books").whereEqualTo("isbn", book.isbn)
-      .get().await().documents.get(0)?.reference?.delete()
+    val t = withContext(coroExHandler) {
+      FirebaseFirestore.getInstance()
+        .collection("users").document(user.uid)
+        .collection("books").whereEqualTo("isbn", book.isbn)
+        .get().await().documents.get(0)?.reference?.delete()
+    }
     return t?.isSuccessful
   }
 
   suspend fun uploadBook(user: FirebaseUser, book: Book) {
     Timber.i("#uploadBook: #{book.title}")
     //upload
-    var ret = FirebaseFirestore.getInstance()
-      .collection("users").document(user.uid)
-      .collection("books").whereEqualTo("isbn", book.isbn)
-      .get().await()
-    if (ret.size() > 0) return
+    if (FirebaseFirestore.getInstance()
+        .collection("users").document(user.uid)
+        .collection("books").whereEqualTo("isbn", book.isbn)
+        .get().await().size() > 0
+    ) return
 
-    val data = mutableMapOf(
-      "isbn" to book.isbn, "user" to user.uid,
-      "localfile_path" to book.lastImagePath,
-      "title" to book.title, "thumbnailUrl" to book.thumbnailUrl, "authors" to book.authors,
-      "created_at" to Date(), "updated_at" to Date(), "numScraps" to 0
-    )
     FirebaseFirestore.getInstance().collection("users").document(user.uid)
-      .collection("books").add(data).await()
+      .collection("books")
+      .add(book.copy(created_at = Date(), updated_at = Date()))
+      .await()
   }
 
   suspend fun getScraps(user: FirebaseUser, isbn: String): List<Scrap> {
-    val ref = FirebaseFirestore.getInstance().collection("users")
-      .document(user.uid).collection("scraps").whereEqualTo("isbn", isbn)
-    return ref.get().await().documents.map {
-      val o = it.toObject(Scrap::class.java) ?: return listOf()
-      o.id = it.id; o
-    }.filter { it.isbn == isbn }
+    return (
+            FirebaseFirestore.getInstance().collection("users")
+              .document(user.uid).collection("scraps").whereEqualTo("isbn", isbn)
+              .get().await().documents.map {
+              val o = it.toObject(Scrap::class.java) ?: return listOf()
+              o.id = it.id; o
+            }.filter { it.isbn == isbn }
+            )
   }
 
   suspend fun deleteScrap(user: FirebaseUser, scrap: Scrap) {

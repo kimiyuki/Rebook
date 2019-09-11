@@ -11,14 +11,13 @@ import kotlinx.coroutines.withContext
 
 suspend fun getBookInfoFromGoogleAPI(isbnFromBarcode: String): Book? {
   val ret = withContext(Dispatchers.IO) {
-    val ret = async {
+    async {
       HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbnFromBarcode}")
     }.await()
       .let {
         Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
           .adapter(GoogleBookRes::class.java).fromJson(it ?: "{}")
       }
-    ret
   }
   val googleBook = ret?.items?.get(0)
   val bookTitle = googleBook?.volumeInfo?.title ?: ""

@@ -13,15 +13,14 @@ object CloudStorageRep {
 
   suspend fun uploadFile(fpath: String, scrap: Scrap) {
     Timber.i("uploadFile")
-    val fileRef = storageRef.child("${System.currentTimeMillis()}.jpg")
-    //upload image file, maybe no need to put await()
-    fileRef.putFile(Uri.fromFile(File(scrap.localImagePath))).await()
+    storageRef.child("${System.currentTimeMillis()}.jpg")
+      .putFile(Uri.fromFile(File(scrap.localImagePath))).await()
   }
 
   suspend fun downLoadFile(fpath: String): File {
     Timber.i("downFile")
-    val localFile = File.createTempFile("images", "jpg")
-    storageRef.child(fpath).getFile(localFile).await()
-    return localFile
+    return File.createTempFile("images", "jpg").also {
+      storageRef.child(fpath).getFile(it).await()
+    }
   }
 }

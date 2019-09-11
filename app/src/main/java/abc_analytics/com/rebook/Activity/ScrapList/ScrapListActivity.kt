@@ -48,10 +48,12 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
       }
     }
     if (user == null) return
-    ViewModelProvider(this).get(MyViewModel::class.java)
-      .getScraps(user, book.isbn).observe(this, Observer {
-        updateUI(it)
-      })
+    launch {
+      ViewModelProvider(this@ScrapListActivity).get(MyViewModel::class.java)
+        .getScraps(user, book.isbn).observe(this@ScrapListActivity, Observer {
+          updateUI(it)
+        })
+    }
   }
 
   fun updateUI(scrapArray: List<Scrap>): Unit {
