@@ -9,8 +9,13 @@ import com.squareup.okhttp.Callback
 import com.squareup.okhttp.OkHttpClient
 import com.squareup.okhttp.Request
 import com.squareup.okhttp.Response
+import kotlinx.coroutines.CoroutineExceptionHandler
 import org.json.JSONObject
 import java.io.IOException
+
+val coroExHandler: CoroutineExceptionHandler = CoroutineExceptionHandler { ctx, throwable ->
+    Log.e("hello", "$ctx ,例外キャッチ $throwable") // ログ出力のみ
+}
 
 fun getContentsInfo(context: Context): Array<Uri> {
     // 画像の情報を取得する

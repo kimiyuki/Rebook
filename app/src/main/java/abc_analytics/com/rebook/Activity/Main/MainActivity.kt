@@ -15,7 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.coroutines.CoroutineContext
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
@@ -42,12 +43,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     setSupportActionBar(toolbar)
+    Timber.plant(Timber.DebugTree())
     checkPerm()
     val user = FirebaseAuth.getInstance().currentUser ?: return
-    myViewModel = ViewModelProviders.of(this@MainActivity).get(MyViewModel::class.java)
-    myViewModel.getBooks(user).observe(this, Observer {
-      updateUI(it.toTypedArray())
-    })
+    Timber.i(user.displayName)
+    Timber.plant(Timber.DebugTree())
+    myViewModel = ViewModelProvider(this@MainActivity).get(MyViewModel::class.java)
+    launch(coroExHandler) {
+      myViewModel.getBooks(user).observe(this@MainActivity, Observer {
+        updateUI(it.toTypedArray())
+      })
+    }
     fab.setOnClickListener { view ->
       startActivity(Intent(this, CaptureActivity::class.java))
       Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -57,7 +63,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
   private fun updateUI(bookArray: Array<Book?>) {
     title = mAuth.currentUser?.displayName ?: "no yet login"
-    mBookAdapter = BookListAdapter(this@MainActivity,
+    mBookAdapter = BookListAdapter(
+      this@MainActivity,
       bookArray.toMutableList(),
       onItemClicked = moveToScrapList(),
       onItemLongClicked = deleteBook(user)

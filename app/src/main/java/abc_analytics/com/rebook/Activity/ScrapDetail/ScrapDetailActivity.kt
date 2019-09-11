@@ -4,7 +4,7 @@ import abc_analytics.com.rebook.EXTRA_SCRAP
 import abc_analytics.com.rebook.FROM_ACTIVITY
 import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.R
-import abc_analytics.com.rebook.Repository.FireStoreRep.Companion.updatePageNumberInScrap
+import abc_analytics.com.rebook.Repository.FireStoreRep.updatePageNumberInScrap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -65,18 +65,18 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
       Toast.makeText(this, "no isbn", Toast.LENGTH_LONG).show()
       return
     }
-    val data = hashMapOf(
-      "isbn" to scrap.isbn,
-      "user" to user.uid,
-      "title" to scrap.bookTitle,
-      "doc" to scrap.doc,
-      "imagePath" to scrap.imagePath,
-      "localStoragePath" to scrap.localImagePath,
-      "created_at" to Date(),
-      "updated_at" to Date()
-    )
+//    val data = hashMapOf(
+//      "isbn" to scrap.isbn,
+//      "user" to user.uid,
+//      "title" to scrap.bookTitle,
+//      "doc" to scrap.doc,
+//      "imagePath" to scrap.imagePath,
+//      "localStoragePath" to scrap.localImagePath,
+//      "created_at" to Date(),
+//      "updated_at" to Date()
+//    )
     db.collection("users").document(user.uid)
-      .collection("scraps").add(data)
+      .collection("scraps").add(scrap.copy(created_at = Date(), updated_at = Date()))
       .addOnSuccessListener {
         //
       }

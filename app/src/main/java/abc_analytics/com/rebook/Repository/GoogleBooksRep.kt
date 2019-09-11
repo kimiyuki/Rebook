@@ -3,7 +3,6 @@ package abc_analytics.com.rebook.Repository
 import abc_analytics.com.rebook.HttpUtil
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.GoogleBookRes
-import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +21,6 @@ suspend fun getBookInfoFromGoogleAPI(isbnFromBarcode: String): Book? {
     ret
   }
   val googleBook = ret?.items?.get(0)
-  Log.d(abc_analytics.com.rebook.Activity.Login.TAG, googleBook?.toString())
   val bookTitle = googleBook?.volumeInfo?.title ?: ""
   //if (bookTitle == "") { return null }
   val thumbnailUrl = googleBook?.volumeInfo?.imageLinks?.smallThumbnail

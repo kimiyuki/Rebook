@@ -6,7 +6,7 @@ import abc_analytics.com.rebook.Activity.Main.MyViewModel
 import abc_analytics.com.rebook.Activity.ScrapDetail.ScrapDetailActivity
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
-import abc_analytics.com.rebook.Repository.FireStoreRep.Companion.deleteScrap
+import abc_analytics.com.rebook.Repository.FireStoreRep.deleteScrap
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast

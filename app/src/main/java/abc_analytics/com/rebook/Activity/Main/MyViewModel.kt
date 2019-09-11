@@ -7,6 +7,7 @@ import androidx.annotation.UiThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,25 +23,20 @@ class MyViewModel : ViewModel(), CoroutineScope {
   override val coroutineContext: CoroutineContext
     get() = Dispatchers.Main + job
 
-  @UiThread
   fun addBook(user: FirebaseUser, book: Book) {
-    //init{} makes list non-null
     val list = books.value ?: return
     list.add(book)
-    launch {
+    viewModelScope.launch {
+      //init{} makes list non-null
       FireStoreRep.uploadBook(user = user, book = book)
     }
-    //valueに代入があると,外部でobserveしてるものに通知が行く
-    books.value = list
   }
 
-  @UiThread
   fun getBooks(user: FirebaseUser): LiveData<MutableList<Book>> {
-    return books.also {
-      launch {
-        it.value = FireStoreRep.getBooks(user) as MutableList<Book>
-      }
+    viewModelScope.launch {
+      books.value = FireStoreRep.getBooks(user) as MutableList<Book>
     }
+    return books
   }
 
   @UiThread
