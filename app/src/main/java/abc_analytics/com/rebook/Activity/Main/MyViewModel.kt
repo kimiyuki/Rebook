@@ -26,7 +26,7 @@ class MyViewModel : ViewModel(), CoroutineScope {
   suspend fun addBook(user: FirebaseUser, book: Book) {
     val list = books.value ?: return
     list.add(book)
-    FireStoreRep.uploadBook(user = user, book = book)
+    FireStoreRep.addBook(user = user, book = book)
   }
 
   suspend fun getBooks(user: FirebaseUser): LiveData<MutableList<Book>> {

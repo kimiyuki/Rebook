@@ -2,7 +2,7 @@ package abc_analytics.com.rebook.Repository
 
 import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
-import abc_analytics.com.rebook.coroExHandler
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentReference
@@ -48,18 +48,20 @@ object FireStoreRep {
   }
 
   suspend fun deleteBook(user: FirebaseUser, book: Book): Boolean? {
-    val t = withContext(coroExHandler) {
+    runCatching {
       ref.collection("books").whereEqualTo("isbn", book.isbn)
-        .get().await().documents.get(0)?.reference?.delete()
-    }
-    return t?.isSuccessful
+        .get().await().first().reference.delete().await()
+    }.let { return it.isSuccess }
   }
 
-  suspend fun uploadBook(user: FirebaseUser, book: Book) {
-    Timber.i("#uploadBook: #{book.title}")
-    //upload
-    if (ref.collection("books").document(book.isbn).get().await().exists()) return
+  suspend fun addBook(user: FirebaseUser, book: Book): Boolean {
+    Timber.i("#addBook: #{book.title}")
+    ref.collection("books")
+      .document(book.isbn).get().await().exists() && return false
     ref.set(book.copy(created_at = Date(), updated_at = Date()))
+      .let { t ->
+        runCatching { Tasks.await(t) }.let { return it.isSuccess }
+      }
   }
 
   suspend fun getScraps(user: FirebaseUser, isbn: String): List<Scrap> {
