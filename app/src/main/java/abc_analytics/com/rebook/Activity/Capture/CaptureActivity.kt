@@ -71,17 +71,13 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
         updateUI()
       })
     }
-    book = intent.getParcelableExtra<Book>(EXTRA_BOOK)
+    book = intent.getSerializableExtra(EXTRA_BOOK) as Book
     reqPermissionAndStartCamera(view_finder) // Request camera permissions
     view_finder.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateTransform() }
     checkBoxOkTitle.setOnCheckedChangeListener { buttonView, isChecked ->
       if (!isChecked) {
         textViewTitleCapture.text = ""
       }
-    }
-    floatingActionButtonCapture.apply {
-      isClickable = true
-      setOnClickListener { v -> fbListener(v, imageCapture()) }
     }
   }
 
@@ -119,7 +115,8 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
       startActivity(intent)
     }
     launch(coroExHandler) {
-      getBookInfoFromGoogleAPI(isbnFromBarcode)?.let {
+      book = getBookInfoFromGoogleAPI(isbnFromBarcode)
+      book?.let {
         textViewTitleCapture.text = it.title
         checkBoxOkTitle.isChecked = true
         it.lastImagePath = lastImagePath
@@ -152,6 +149,10 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
       )
     }
     CameraX.bindToLifecycle(this, preview, imageCapture, imageAnalyzer)
+    floatingActionButtonCapture.apply {
+      isClickable = true
+      setOnClickListener { v -> fbListener(v, imageCapture) }
+    }
   }
 
   private fun reqPermissionAndStartCamera(v: TextureView) {
@@ -258,7 +259,7 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
       doc = txt, localImagePath = lastImagePath,
       isbn = book!!.isbn, bookTitle = book!!.title
     )
-    sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+    sendIntent.putExtra(WHICH_ACTIVITY, this.localClassName)
     sendIntent.putExtra(EXTRA_SCRAP, scrap)
     startActivityForResult(sendIntent, CAPTURE_DETAIL_INTENT)
   }

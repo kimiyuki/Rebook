@@ -41,7 +41,7 @@ class MyViewModel : ViewModel(), CoroutineScope {
 
   fun deleteBook(user: FirebaseUser, book: Book) {
     val list = books.value ?: return
-    list.removeIf { it.id == book.id }
+    list.removeIf { it.isbn == book.isbn }
     viewModelScope.launch {
       val ret = FireStoreRep.deleteBook(user = user, book = book)
       if (ret != true) {

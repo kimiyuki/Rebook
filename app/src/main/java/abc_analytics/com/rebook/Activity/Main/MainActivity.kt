@@ -77,7 +77,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
   private fun moveToScrapList(): (Book?) -> Unit {
     return { book ->
       val sendIntent = Intent(this@MainActivity, ScrapListActivity::class.java)
-      sendIntent.putExtra(FROM_ACTIVITY, this.localClassName)
+      sendIntent.putExtra(WHICH_ACTIVITY, this.localClassName)
       sendIntent.putExtra(EXTRA_BOOK, book)
       startActivity(sendIntent)
     }

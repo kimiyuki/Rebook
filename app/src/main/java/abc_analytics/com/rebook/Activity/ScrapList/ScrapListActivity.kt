@@ -40,7 +40,7 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_scrap_list)
-    book = intent.getParcelableExtra<Book>(EXTRA_BOOK).also { title = it.title }
+    book = (intent.getSerializableExtra(EXTRA_BOOK) as Book).also { title = it.title }
     fabScrapList.setOnClickListener { view ->
       Intent(this@ScrapListActivity, CaptureActivity::class.java).apply {
         putExtra(EXTRA_BOOK, book)
@@ -81,7 +81,7 @@ class ScrapListActivity : AppCompatActivity(), CoroutineScope {
     return { scrap ->
       Intent(this@ScrapListActivity, ScrapDetailActivity::class.java).let {
         it.putExtra(EXTRA_SCRAP, scrap)
-        it.putExtra(FROM_ACTIVITY, this.localClassName)
+        it.putExtra(WHICH_ACTIVITY, this.localClassName)
         startActivityForResult(it, SCRAPLIST_DETAIL_INTENT)
       }
     }

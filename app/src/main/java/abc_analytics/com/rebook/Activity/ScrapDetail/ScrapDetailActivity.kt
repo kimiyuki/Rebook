@@ -1,12 +1,12 @@
 package abc_analytics.com.rebook.Activity.ScrapDetail
 
 import abc_analytics.com.rebook.EXTRA_SCRAP
-import abc_analytics.com.rebook.FROM_ACTIVITY
 import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.R
 import abc_analytics.com.rebook.Repository.CloudStorageRep.downLoadFile
 import abc_analytics.com.rebook.Repository.CloudStorageRep.uploadFile
 import abc_analytics.com.rebook.Repository.FireStoreRep.updatePageNumberInScrap
+import abc_analytics.com.rebook.WHICH_ACTIVITY
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.Toast
@@ -29,7 +29,7 @@ import kotlin.coroutines.CoroutineContext
 class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
   private val db = FirebaseFirestore.getInstance()
   private var user: FirebaseUser? = FirebaseAuth.getInstance().currentUser
-  private val scrap: Scrap by lazy { intent.getSerializableExtra(EXTRA_SCRAP) as Scrap }
+  private lateinit var scrap: Scrap
   private val job = Job()
   override val coroutineContext: CoroutineContext
     get() = Dispatchers.Main + job
@@ -37,10 +37,18 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_scrap_detail)
-    textViewDoc.text = scrap.doc.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
-    Timber.d("pageNumber:${scrap.pageNumber}")
-    editTextPageNumber.setText(scrap.pageNumber.toString())
-    when (intent.getStringExtra(FROM_ACTIVITY)) {
+    if (user == null) finish()
+    try {
+      scrap = intent.getSerializableExtra(EXTRA_SCRAP) as Scrap
+    } catch (e: Exception) {
+      finish()
+    }
+    scrap.apply {
+      Timber.d("pageNumber:${pageNumber}")
+      textViewDoc.text = doc.replace("(\n)".toRegex(), "").replace(" ".toRegex(), "\n")
+      editTextPageNumber.setText(pageNumber.toString())
+    }
+    when (intent.getStringExtra(WHICH_ACTIVITY)) {
       "Activity.ScrapList.ScrapListActivity" -> {
         okButton.isVisible = false
         launch {
@@ -53,11 +61,12 @@ class ScrapDetailActivity : AppCompatActivity(), CoroutineScope {
         imageViewScrapCaptured.setImageURI(scrap.localImagePath.toUri())
       }
     }
-    if (user == null) return
     okButton.setOnClickListener { _ ->
+      if (user == null) return@setOnClickListener
+      scrap.imagePath = uploadFile(user!!, scrap)
       insertScrap(user!!, scrap)
       updateNumScrapsInBooks(user!!, scrap.isbn)
-      launch { uploadFile(scrap.imagePath, scrap) }
+      Timber.i("scrap info and file are uploaded")
     }
     editTextPageNumber.setOnFocusChangeListener { v, hasFocus ->
       if (!hasFocus) updatePageNumberInScrap(user!!, scrap, (v as EditText).text.toString().toInt())
