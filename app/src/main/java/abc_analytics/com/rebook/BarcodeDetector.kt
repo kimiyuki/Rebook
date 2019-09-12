@@ -1,8 +1,6 @@
 package abc_analytics.com.rebook
 
-import android.content.Context
 import android.os.Bundle
-import android.widget.Toast
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -12,7 +10,7 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import java.util.concurrent.TimeUnit
 
 class BarcodeDetector(
-  val context: Context, val getIsbn: () -> String?, val firebaseAnalytics: FirebaseAnalytics,
+  var isbn: String?, val firebaseAnalytics: FirebaseAnalytics,
   val checkIfWidgetNoThankyou: () -> Boolean, val setBookInfo: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
   private var lastAnalyzedTimestamp = 0L
@@ -39,12 +37,7 @@ class BarcodeDetector(
       .addOnSuccessListener { barcodes ->
         barcodes.filter { it.displayValue?.startsWith("97") ?: false }.forEach { barcode ->
           val valueType = barcode.valueType
-          Toast.makeText(
-            context,
-            "${ReBook.BARCODE_TYPES[valueType]}:${valueType}:${barcode.displayValue}",
-            Toast.LENGTH_LONG
-          ).show()
-          if (getIsbn() != barcode.displayValue!!) {
+          if (isbn != barcode.displayValue!!) {
             //TODO, needed to change awaitable function?
             setBookInfo(barcode.displayValue!!)
             val bundle = Bundle()
@@ -54,7 +47,7 @@ class BarcodeDetector(
         }
       }
       .addOnFailureListener {
-        Toast.makeText(context, "scan failed", Toast.LENGTH_LONG).show()
+        //
       }
     lastAnalyzedTimestamp = currentTimestamp
   }

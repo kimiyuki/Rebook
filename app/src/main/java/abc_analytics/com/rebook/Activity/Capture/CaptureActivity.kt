@@ -21,6 +21,7 @@ import android.util.Rational
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -39,7 +40,10 @@ import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.document.FirebaseVisionCloudDocumentRecognizerOptions
 import kotlinx.android.synthetic.main.content_capture.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
 import java.util.*
@@ -75,7 +79,30 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
         textViewTitleCapture.text = ""
       }
     }
-    floatingActionButtonCapture.isClickable = true
+    floatingActionButtonCapture.apply {
+      isClickable = true
+      setOnClickListener { v -> fbListener(v, imageCapture()) }
+    }
+  }
+
+  private fun fbListener(view: View, imageCapture: ImageCapture) {
+    val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
+    view.isClickable = false
+    imageCapture.takePicture(file,
+      object : ImageCapture.OnImageSavedListener {
+        override fun onImageSaved(file: File) {
+          lastImagePath = file.absolutePath
+          val bitmap = BitmapFactory.decodeFile(
+            file.absolutePath,
+            BitmapFactory.Options().also {
+              it.inPreferredConfig = Bitmap.Config.ARGB_8888
+            })
+          analyzeImage(bitmap, sendToScrapDetail = { txt -> sendToScrapDetail(txt) })
+          view.isClickable = true
+        }
+
+        override fun onError(er: ImageCapture.UseCaseError, msg: String, cause: Throwable?) {}
+      })
   }
 
   private fun updateUI() {
@@ -106,10 +133,7 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
   }
 
   private fun startCamera() {
-
-    // Create configuration object for the viewfinder use case
     val preview = preview()
-    // Build the image capture use case and attach button click listener
     val imageCapture = imageCapture()
     val analyzerConfig = ImageAnalysisConfig.Builder().apply {
       // Use a worker thread for image analysis to prevent glitches
@@ -119,19 +143,14 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
       // analyzing *every* image
       setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
     }.build()
-    //val analyzerUseCase = ImageAnalysis(analyzerConfig).apply {
-    val analyzer = BarcodeDetector(
-      context = this,
-      getIsbn = { book?.isbn },
-      firebaseAnalytics = firebaseAnalytics,
-      checkIfWidgetNoThankyou = { checkBoxOkTitle.isChecked },
-      setBookInfo = { isbn -> setBookInfo(isbn) }
-    )
-    val imageAnalyzer = ImageAnalysis(analyzerConfig)
-    imageAnalyzer.analyzer = analyzer
-    // Bind use cases to lifecycle
-    // If Android Studio complains about "this" being not a LifecycleOwner
-    // try rebuilding the project or updating the appcompat dependency to version 1.1.0 or higher.
+    val imageAnalyzer = ImageAnalysis(analyzerConfig).also {
+      it.analyzer = BarcodeDetector(
+        isbn = book?.isbn,
+        firebaseAnalytics = firebaseAnalytics,
+        checkIfWidgetNoThankyou = { checkBoxOkTitle.isChecked },
+        setBookInfo = { isbn -> setBookInfo(isbn) }
+      )
+    }
     CameraX.bindToLifecycle(this, preview, imageCapture, imageAnalyzer)
   }
 
@@ -207,9 +226,6 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
     val imageCaptureConfig = Builder()
       .apply {
         setTargetAspectRatio(Rational(1, 1))
-        // We don't set a resolution for image capture; instead, we
-        // select a capture mode which will infer the appropriate
-        // resolution based on aspect ration and requested mode
         setCaptureMode(ImageCapture.CaptureMode.MIN_LATENCY)
       }.build()
     val imageCapture = ImageCapture(imageCaptureConfig) //same name of this constructing function?
@@ -220,32 +236,9 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
     Toast.makeText(this, "rotation: ${rotation}", Toast.LENGTH_LONG).show()
     imageCapture.setTargetRotation(rotation)
 
-
-    floatingActionButtonCapture.setOnClickListener {
-      val file = File(externalMediaDirs.first(), "${System.currentTimeMillis()}.jpg")
-      it.isClickable = false
-      imageCapture.takePicture(file,
-        object : ImageCapture.OnImageSavedListener {
-          override fun onImageSaved(file: File) {
-            lastImagePath = file.absolutePath
-            val bitmap = BitmapFactory.decodeFile(
-              file.absolutePath,
-              BitmapFactory.Options().also {
-                it.inPreferredConfig = Bitmap.Config.ARGB_8888
-              })
-            analyzeImage(bitmap, sendToScrapDetail = { txt -> sendToScrapDetail(txt) })
-          }
-
-          override fun onError(
-            useCaseError: ImageCapture.UseCaseError,
-            message: String,
-            cause: Throwable?
-          ) {
-          }
-        })
-    }
     return imageCapture
   }
+
 
   private fun analyzeImage(image: Bitmap, sendToScrapDetail: (String) -> Unit) {
     val firebaseVisionImage = FirebaseVisionImage.fromBitmap(image)
