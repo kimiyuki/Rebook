@@ -11,25 +11,19 @@ import kotlinx.coroutines.withContext
 
 suspend fun getBookInfoFromGoogleAPI(isbnFromBarcode: String): Book? {
   val ret = withContext(Dispatchers.IO) {
-    async {
-      HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbnFromBarcode}")
-    }.await()
-      .let {
-        Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-          .adapter(GoogleBookRes::class.java).fromJson(it ?: "{}")
-      }
+    HttpUtil().httpGET("https://www.googleapis.com/books/v1/volumes?q=${isbnFromBarcode}")
+  }.let {
+    Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+      .adapter(GoogleBookRes::class.java).fromJson(it ?: "{}")
   }
-  val googleBook = ret?.items?.get(0)
-  val bookTitle = googleBook?.volumeInfo?.title ?: ""
-  //if (bookTitle == "") { return null }
-  val thumbnailUrl = googleBook?.volumeInfo?.imageLinks?.smallThumbnail
-    ?: googleBook?.volumeInfo?.imageLinks?.thumbnail
-    ?: "no image"
-  val authors: List<String> = googleBook?.volumeInfo?.authors ?: listOf()
+  val googleBook = ret?.items?.get(0)?.volumeInfo ?: return null
+  googleBook.title ?: return null
   return Book(
     isbn = isbnFromBarcode,
-    title = bookTitle,
-    thumbnailUrl = thumbnailUrl,
-    authors = authors
+    title = googleBook.title,
+    thumbnailUrl = googleBook.imageLinks?.smallThumbnail
+      ?: googleBook.imageLinks?.thumbnail
+      ?: "no image",
+    authors = googleBook.authors ?: listOf()
   )
 }

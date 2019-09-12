@@ -8,18 +8,14 @@ import abc_analytics.com.rebook.Model.Book
 import abc_analytics.com.rebook.Model.Scrap
 import abc_analytics.com.rebook.R
 import abc_analytics.com.rebook.Repository.getBookInfoFromGoogleAPI
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.media.ExifInterface
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.provider.MediaStore
 import android.util.Log
 import android.util.Rational
 import android.util.Size
@@ -41,16 +37,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.google.firebase.ml.vision.document.FirebaseVisionCloudDocumentRecognizerOptions
-import com.google.firebase.ml.vision.document.FirebaseVisionDocumentText
 import kotlinx.android.synthetic.main.content_capture.*
 import kotlinx.coroutines.*
 import timber.log.Timber
 import java.io.File
-import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
 class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
@@ -100,16 +92,15 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
       startActivity(intent)
     }
     launch(coroExHandler) {
-      book = async { getBookInfoFromGoogleAPI(isbnFromBarcode) }.await()
-      if (book != null && book!!.title.isNotEmpty()) {
-        textViewTitleCapture.text = book!!.title
+      getBookInfoFromGoogleAPI(isbnFromBarcode)?.let {
+        textViewTitleCapture.text = it.title
         checkBoxOkTitle.isChecked = true
-        book!!.lastImagePath = lastImagePath
-        viewModel.addBook(user!!, book!!)
-      }
-      Bundle().apply {
-        putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
-        firebaseAnalytics.logEvent("upload_book_${book?.isbn}", this)
+        it.lastImagePath = lastImagePath
+        viewModel.addBook(user!!, it)
+        Bundle().apply {
+          putString(FirebaseAnalytics.Param.METHOD, "google firebase api")
+          firebaseAnalytics.logEvent("upload_book_${book?.isbn}", this)
+        }
       }
     }
   }
@@ -118,10 +109,8 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
 
     // Create configuration object for the viewfinder use case
     val preview = preview()
-
     // Build the image capture use case and attach button click listener
     val imageCapture = imageCapture()
-
     val analyzerConfig = ImageAnalysisConfig.Builder().apply {
       // Use a worker thread for image analysis to prevent glitches
       val analyzerThread = HandlerThread("barCodeDetector").apply { start() }
@@ -150,22 +139,21 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
     if (allPermissionsGranted()) {
       v.post { startCamera() }
     } else {
-      ActivityCompat.requestPermissions( this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS )
+      ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
     }
   }
 
-  override fun onRequestPermissionsResult( requestCode: Int, permissions: Array<String>, grantResults: IntArray ) {
-    if (requestCode == REQUEST_CODE_PERMISSIONS) {
-      if (allPermissionsGranted()) {
-        view_finder.post { startCamera() }
-      } else {
-        Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show()
-        finish()
-      }
+  override fun onRequestPermissionsResult(reqCode: Int, perms: Array<String>, results: IntArray) {
+    if (reqCode != REQUEST_CODE_PERMISSIONS) return
+    if (allPermissionsGranted()) {
+      view_finder.post { startCamera() }
+    } else {
+      Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT).show()
+      finish()
     }
   }
 
-  fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+  private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
     ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
   }
 
@@ -178,15 +166,12 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
 
     // Build the viewfinder use case
     val preview = Preview(previewConfig)
-
     // Every time the viewfinder is updated, recompute layout
     preview.setOnPreviewOutputUpdateListener {
-
       // To update the SurfaceTexture, we have to remove it and re-add it
       val parent = view_finder.parent as ViewGroup
       parent.removeView(view_finder)
       parent.addView(view_finder, 0)
-
       view_finder.surfaceTexture = it.surfaceTexture
       updateTransform()
     }
@@ -248,18 +233,21 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
               BitmapFactory.Options().also {
                 it.inPreferredConfig = Bitmap.Config.ARGB_8888
               })
-            analyzeImage(bitmap, sendToScrapDetail= {txt -> sendToScrapDetail(txt)})
+            analyzeImage(bitmap, sendToScrapDetail = { txt -> sendToScrapDetail(txt) })
           }
+
           override fun onError(
             useCaseError: ImageCapture.UseCaseError,
             message: String,
             cause: Throwable?
-          ) { }
+          ) {
+          }
         })
     }
     return imageCapture
   }
-  private fun analyzeImage(image: Bitmap, sendToScrapDetail:(String)->Unit) {
+
+  private fun analyzeImage(image: Bitmap, sendToScrapDetail: (String) -> Unit) {
     val firebaseVisionImage = FirebaseVisionImage.fromBitmap(image)
     val options =
       FirebaseVisionCloudDocumentRecognizerOptions.Builder()
@@ -267,7 +255,7 @@ class CaptureActivity : AppCompatActivity(), CoroutineScope, LifecycleOwner {
     val textRecognizer = FirebaseVision.getInstance()
       .getCloudDocumentTextRecognizer(options)
     textRecognizer.processImage(firebaseVisionImage)
-      .addOnSuccessListener { sendToScrapDetail(it.text)}
+      .addOnSuccessListener { sendToScrapDetail(it.text) }
       .addOnFailureListener { }
   }
 
