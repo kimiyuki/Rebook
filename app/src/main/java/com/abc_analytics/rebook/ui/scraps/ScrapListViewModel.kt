@@ -1,10 +1,10 @@
-package com.abc_analytics.rebook.ui.dashboard
+package com.abc_analytics.rebook.ui.scraps
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class DashboardViewModel : ViewModel() {
+class ScrapListViewModel : ViewModel() {
 
     private val _text = MutableLiveData<String>().apply {
         value = "This is dashboard Fragment"

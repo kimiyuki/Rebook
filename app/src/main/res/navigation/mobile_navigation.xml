@@ -12,14 +12,19 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
-        android:id="@+id/navigation_dashboard"
-        android:name="com.abc_analytics.rebook.ui.dashboard.DashboardFragment"
-        android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        android:id="@+id/navigation_scraps"
+        android:name="com.abc_analytics.rebook.ui.scraps.ScrapListFragment"
+        android:label="@string/title_scraps"
+        tools:layout="@layout/fragment_scrap" />
 
     <fragment
-        android:id="@+id/navigation_notifications"
-        android:name="com.abc_analytics.rebook.ui.notifications.NotificationsFragment"
-        android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        android:id="@+id/navigation_detail"
+        android:name="com.abc_analytics.rebook.ui.detail.DetailFragment"
+        android:label="@string/title_detail"
+        tools:layout="@layout/fragment_detail" />
+    <fragment
+        android:id="@+id/navigation_capture"
+        android:name="com.abc_analytics.rebook.ui.capture.CaptureFragment"
+        android:label="fragment_capture"
+        tools:layout="@layout/fragment_capture" />
 </navigation>
