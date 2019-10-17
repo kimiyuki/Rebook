@@ -14,6 +14,9 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 
+/**
+* Amazon Advertising APIは、アフィリエイトの売上がないと使えない
+**/
 class SignedRequestsHelper() {
     lateinit var associateTag :String
     lateinit var endpoint:String
